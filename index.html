@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Timer+ | 운동 인터벌 & 타바타 타이머 (TimerPlus)</title>
+  <meta name="description" content="타이머플러스(TimerPlus)와 동일한 기능의 고성능 운동 인터벌 타이머. 타바타, 복싱 라운드, HIIT, EMOM 맞춤 루틴 지원 및 100% 오프라인 동작 PWA.">
+  <meta name="theme-color" content="#0a0c10">
+
+  <!-- iOS Safari PWA Metas -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Timer+">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg">
+
+  <!-- Modern Athletic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <!-- Ambient Dynamic Colored Glow -->
+  <div class="ambient-glow" id="ambientGlow"></div>
+
+  <!-- Toast Message -->
+  <div class="toast-msg" id="toastMsg">루틴이 저장되었습니다.</div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <button class="routine-selector-btn" id="openPresetsBtn" aria-label="루틴 선택">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <span class="routine-name-text" id="headerRoutineName">타바타 4분</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="soundQuickBtn" aria-label="소리 켜기/끄기">
+          <!-- Audio On SVG -->
+          <svg id="soundIconOn" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <!-- Audio Muted SVG -->
+          <svg id="soundIconOff" style="display:none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+
+        <button class="icon-btn" id="openSettingsBtn" aria-label="설정">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+
+        <button class="icon-btn" id="fullscreenBtn" aria-label="전체화면">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workout Screen -->
+    <main class="workout-viewport">
+      <!-- Phase Indicator & Round/Set Counter -->
+      <div class="phase-header-wrapper">
+        <div class="phase-pill" id="phasePill">준비</div>
+        <div class="rounds-sets-bar">
+          <div class="badge-item">
+            라운드 <strong id="roundDisplay">1 / 8</strong>
+          </div>
+          <div class="badge-item" id="setDisplayWrapper">
+            세트 <strong id="setDisplay">1 / 1</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Radial SVG Dial Timer -->
+      <div class="dial-container">
+        <svg class="dial-svg" viewBox="0 0 260 260">
+          <!-- Dial Background Track -->
+          <circle class="dial-track" cx="130" cy="130" r="115" />
+          <!-- Animated Progress Dial -->
+          <circle class="dial-progress" id="dialProgressRing" cx="130" cy="130" r="115"
+                  stroke-dasharray="722.56" stroke-dashoffset="0" />
+        </svg>
+
+        <div class="dial-content">
+          <div class="time-display" id="mainTimeDisplay">00:10</div>
+          <div class="total-remaining-hint">
+            남은 총 시간: <span id="totalRemainingDisplay">04:10</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next Phase Preview Card -->
+      <div class="next-up-card" id="nextUpCard">
+        <span class="next-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="13 17 18 12 13 7"></polyline>
+            <polyline points="6 17 11 12 6 7"></polyline>
+          </svg>
+          다음 단계:
+        </span>
+        <span class="next-value" id="nextUpText">운동 (00:20)</span>
+      </div>
+
+      <!-- Total Workout Progress Bar -->
+      <div class="overall-progress-wrapper">
+        <div class="progress-labels">
+          <span>진행률</span>
+          <span id="overallPercentText">0%</span>
+        </div>
+        <div class="linear-track">
+          <div class="linear-bar" id="overallProgressBar"></div>
+        </div>
+      </div>
+
+      <!-- Main Controls -->
+      <div class="controls-bar">
+        <!-- Previous Interval Button -->
+        <button class="secondary-control-btn" id="prevBtn" aria-label="이전 단계">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="19 20 9 12 19 4 19 20"></polygon>
+            <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="3"></line>
+          </svg>
+        </button>
+
+        <!-- Play / Pause Main Action Button -->
+        <button class="main-play-btn" id="playBtn" aria-label="시작 / 일시정지">
+          <!-- Play Icon -->
+          <svg id="playIcon" viewBox="0 0 24 24">
+            <polygon points="6 3 20 12 6 21 6 3"></polygon>
+          </svg>
+          <!-- Pause Icon -->
+          <svg id="pauseIcon" style="display:none;" viewBox="0 0 24 24">
+            <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+            <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+          </svg>
+        </button>
+
+        <!-- Next Interval Button -->
+        <button class="secondary-control-btn" id="nextBtn" aria-label="다음 단계">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 4 15 12 5 20 5 4"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="3"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Bottom Utilities -->
+      <div class="bottom-utils-bar">
+        <button class="util-btn" id="resetBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M2.5 2v6h6M21.5 22v-6h-6"></path>
+            <path d="M22 11.5A10 10 0 0 0 3.2 7.2L2.5 8M2 12.5a10 10 0 0 0 18.8 4.3l.7-.8"></path>
+          </svg>
+          리셋
+        </button>
+
+        <span class="util-btn" id="wakelockStatus" title="화면 꺼짐 방지 활성화됨">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+            <circle cx="12" cy="12" r="4"></circle>
+          </svg>
+          <span id="wakelockText">화면 유지 ON</span>
+        </span>
+
+        <button class="util-btn" id="editCurrentRoutineBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          설정 변경
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 1: Presets Sheet (루틴 선택 목록)
+       ========================================================================= -->
+  <div class="modal-overlay" id="presetsModal">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <h3 class="sheet-title">운동 루틴 선택</h3>
+        <button class="icon-btn" id="closePresetsBtn" aria-label="닫기">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <div id="presetsListContainer" style="display:flex; flex-direction:column; gap:10px;">
+          <!-- Rendered by JS -->
+        </div>
+
+        <button class="primary-btn" id="createNewRoutineBtn" style="margin-top: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          새로운 루틴 만들기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2: Routine Editor Modal (루틴 편집 / 생성)
+       ========================================================================= -->
+  <div class="modal-overlay" id="editorModal">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <h3 class="sheet-title" id="editorModalTitle">루틴 설정</h3>
+        <button class="icon-btn" id="closeEditorBtn" aria-label="닫기">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; color:var(--text-secondary); font-weight:700;">루틴 이름</label>
+          <input type="text" id="editNameInput" class="text-input" placeholder="예: 타바타 복근 챌린지">
+        </div>
+
+        <!-- Work Time -->
+        <div class="editor-field">
+          <div class="field-label">
+            <span class="field-name" style="color:var(--color-work);">운동 시간 (Work)</span>
+            <span class="field-desc">각 라운드 집중 운동 시간</span>
+          </div>
+          <div class="stepper-control">
+            <button class="step-btn" data-step="-5" data-target="editWork">-</button>
+            <span class="step-value" id="valEditWork">00:20</span>
+            <button class="step-btn" data-step="5" data-target="editWork">+</button>
+          </div>
+        </div>
+
+        <!-- Rest Time -->
+        <div class="editor-field">
+          <div class="field-label">
+            <span class="field-name" style="color:var(--color-rest);">휴식 시간 (Rest)</span>
+            <span class="field-desc">라운드 간 휴식 시간</span>
+          </div>
+          <div class="stepper-control">
+            <button class="step-btn" data-step="-5" data-target="editRest">-</button>
+            <span class="step-value" id="valEditRest">00:10</span>
+            <button class="step-btn" data-step="5" data-target="editRest">+</button>
+          </div>
+        </div>
+
+        <!-- Rounds -->
+        <div class="editor-field">
+          <div class="field-label">
+            <span class="field-name">라운드 수 (Rounds)</span>
+            <span class="field-desc">세트 당 반복 횟수</span>
+          </div>
+          <div class="stepper-control">
+            <button class="step-btn" data-step="-1" data-target="editRounds">-</button>
+            <span class="step-value" id="valEditRounds">8</span>
+            <button class="step-btn" data-step="1" data-target="editRounds">+</button>
+          </div>
+        </div>
+
+        <!-- Sets -->
+        <div class="editor-field">
+          <div class="field-label">
+            <span class="field-name">세트 수 (Sets)</span>
+            <span class="field-desc">전체 세트 개수</span>
+          </div>
+          <div class="stepper-control">
+            <button class="step-btn" data-step="-1" data-target="editSets">-</button>
+            <span class="step-value" id="valEditSets">1</span>
+            <button class="step-btn" data-step="1" data-target="editSets">+</button>
+          </div>
+        </div>
+
+        <!-- Set Rest -->
+        <div class="editor-field">
+          <div class="field-label">
+            <span class="field-name" style="color:var(--color-set-rest);">세트 간 휴식 (Set Rest)</span>
+            <span class="field-desc">세트가 바뀔 때 쉬는 시간</span>
+          </div>
+          <div class="stepper-control">
+            <button class="step-btn" data-step="-10" data-target="editSetRest">-</button>
+            <span class="step-value" id="valEditSetRest">01:00</span>
+            <button class="step-btn" data-step="10" data-target="editSetRest">+</button>
+          </div>
+        </div>
+
+        <!-- Prepare Time -->
+        <div class="editor-field">
+          <div class="field-label">
+            <span class="field-name" style="color:var(--color-prepare);">준비 시간 (Prepare)</span>
+            <span class="field-desc">운동 시작 전 카운트다운</span>
+          </div>
+          <div class="stepper-control">
+            <button class="step-btn" data-step="-1" data-target="editPrepare">-</button>
+            <span class="step-value" id="valEditPrepare">00:10</span>
+            <button class="step-btn" data-step="1" data-target="editPrepare">+</button>
+          </div>
+        </div>
+
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="primary-btn" id="saveRoutineBtn" style="flex:1;">저장하고 적용</button>
+        <button class="danger-btn" id="deleteRoutineBtn" style="display:none;">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 3: Sound & Settings Modal
+       ========================================================================= -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <h3 class="sheet-title">설정 & 오디오</h3>
+        <button class="icon-btn" id="closeSettingsModalBtn" aria-label="닫기">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <!-- Sound Mode -->
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <span style="font-size:14px; font-weight:700;">사운드 모드</span>
+          <div class="segmented-picker">
+            <button class="seg-btn active" data-mode="all" id="segModeAll">효과음 + 음성</button>
+            <button class="seg-btn" data-mode="beep" id="segModeBeep">효과음만</button>
+            <button class="seg-btn" data-mode="mute" id="segModeMute">무음</button>
+          </div>
+        </div>
+
+        <!-- Volume Slider -->
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px;">
+            <span style="color:var(--text-secondary); font-weight:700;">볼륨 조절</span>
+            <span id="volumePercentText" style="font-weight:800;">80%</span>
+          </div>
+          <input type="range" class="range-slider" id="volumeSlider" min="0" max="100" value="80">
+        </div>
+
+        <!-- Sound Test Buttons -->
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <button class="secondary-btn" id="testBellBtn" style="flex:1; font-size:12px; padding:10px;">🔔 복싱 벨 테스트</button>
+          <button class="secondary-btn" id="testBeepBtn" style="flex:1; font-size:12px; padding:10px;">⏱ 카운트다운 테스트</button>
+        </div>
+
+        <!-- PWA / Offline Status Info -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px; margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="width:8px; height:8px; border-radius:50%; background:var(--color-work); box-shadow:0 0 8px var(--color-work-glow);"></span>
+            <strong style="font-size:14px;">100% 오프라인 지원</strong>
+          </div>
+          <p style="font-size:12px; color:var(--text-secondary); line-height:1.5;">
+            인터넷이 없는 헬스장, 지하, 비행기 모드에서도 완벽하게 작동합니다. 홈 화면에 추가하여 언제든 앱처럼 사용하세요.
+          </p>
+        </div>
+
+        <button class="secondary-btn" id="openIosGuideBtn" style="margin-top:4px;">
+          📱 아이폰 홈 화면 추가 방법
+        </button>
+
+        <button class="danger-btn" id="resetDefaultsBtn" style="margin-top:6px;">
+          기본 루틴으로 초기화
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 4: iOS Safari Install Guide
+       ========================================================================= -->
+  <div class="modal-overlay" id="iosGuideModal">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <h3 class="sheet-title">아이폰 홈 화면에 추가하기</h3>
+        <button class="icon-btn" id="closeIosGuideBtn" aria-label="닫기">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <div class="ios-guide-box">
+          <div class="ios-step">
+            <span class="ios-step-num">1</span>
+            <span>사파리(Safari) 화면 하단의 <strong>공유 버튼</strong>(네모 위 화살표 아이콘)을 누릅니다.</span>
+          </div>
+          <div class="ios-step">
+            <span class="ios-step-num">2</span>
+            <span>메뉴를 아래로 스크롤하여 <strong>'홈 화면에 추가'</strong>를 선택합니다.</span>
+          </div>
+          <div class="ios-step">
+            <span class="ios-step-num">3</span>
+            <span>우측 상단의 <strong>'추가'</strong>를 누르면 오프라인에서도 사용 가능한 앱 아이콘이 생성됩니다!</span>
+          </div>
+        </div>
+        <button class="primary-btn" id="confirmIosGuideBtn" style="margin-top:8px;">확인 완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PWA Installation Banner for Android/Desktop -->
+  <div class="pwa-banner" id="pwaBanner">
+    <div class="pwa-banner-content">
+      <img src="./icons/icon-192.png" alt="Timer+" class="pwa-icon">
+      <div class="pwa-text">
+        <h4>홈 화면에 앱 설치</h4>
+        <p>인터넷 없이 즉시 실행</p>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button class="pwa-install-btn" id="pwaInstallBtn">설치</button>
+      <button class="icon-btn" id="pwaDismissBtn" style="width:32px; height:32px;" aria-label="닫기">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./js/audio.js"></script>
+  <script src="./js/timer.js"></script>
+  <script src="./js/storage.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

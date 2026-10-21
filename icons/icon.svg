@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#181e29"/>
+      <stop offset="100%" stop-color="#0a0c10"/>
+    </linearGradient>
+
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E676"/>
+      <stop offset="50%" stop-color="#00C2FF"/>
+      <stop offset="100%" stop-color="#7C4DFF"/>
+    </linearGradient>
+
+    <linearGradient id="plusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E676"/>
+      <stop offset="100%" stop-color="#00C2FF"/>
+    </linearGradient>
+
+    <!-- Glow Filters -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- App Icon Base Squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle Inner Border -->
+  <rect x="6" y="6" width="500" height="500" rx="106" fill="none" stroke="#ffffff" stroke-width="2" stroke-opacity="0.08"/>
+
+  <!-- Stopwatch Top Button -->
+  <rect x="236" y="44" width="40" height="36" rx="10" fill="#2a3344" stroke="#3b4860" stroke-width="3"/>
+  <rect x="216" y="32" width="80" height="18" rx="6" fill="#3b4860"/>
+
+  <!-- Outer Dial Track -->
+  <circle cx="256" cy="276" r="160" fill="none" stroke="#1c2430" stroke-width="22"/>
+
+  <!-- Progress Arc (Active Ring) -->
+  <circle cx="256" cy="276" r="160" fill="none" stroke="url(#ringGrad)" stroke-width="22"
+          stroke-linecap="round" stroke-dasharray="1005" stroke-dashoffset="260"
+          transform="rotate(-90 256 276)" filter="url(#neonGlow)"/>
+
+  <!-- Clock Ticks -->
+  <line x1="256" y1="134" x2="256" y2="148" stroke="#ffffff" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round"/>
+  <line x1="398" y1="276" x2="384" y2="276" stroke="#ffffff" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round"/>
+  <line x1="256" y1="418" x2="256" y2="404" stroke="#ffffff" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round"/>
+  <line x1="114" y1="276" x2="128" y2="276" stroke="#ffffff" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round"/>
+
+  <!-- Center Timer Plus Symbol -->
+  <!-- Bold Plus Sign with Rounded Edges -->
+  <g filter="url(#shadow)">
+    <!-- Vertical Bar -->
+    <rect x="234" y="210" width="44" height="132" rx="14" fill="url(#plusGrad)"/>
+    <!-- Horizontal Bar -->
+    <rect x="190" y="254" width="132" height="44" rx="14" fill="url(#plusGrad)"/>
+    <!-- Inner Core Highlight -->
+    <circle cx="256" cy="276" r="12" fill="#ffffff" opacity="0.9"/>
+  </g>
+
+  <!-- Subtle Lightning / Energy Dot at 12 o'clock -->
+  <circle cx="256" cy="116" r="8" fill="#00E676" filter="url(#neonGlow)"/>
+</svg>

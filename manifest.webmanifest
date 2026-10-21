@@ -1,0 +1,32 @@
+{
+  "name": "Timer+ 운동 타이머 (TimerPlus)",
+  "short_name": "Timer+",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0c10",
+  "theme_color": "#0a0c10",
+  "orientation": "portrait",
+  "description": "고강도 인터벌 트레이닝(HIIT), 타바타, 복싱 라운드 운동을 위한 최적의 오프라인 모바일 타이머 어플리케이션",
+  "categories": ["fitness", "health", "sports", "utilities"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
