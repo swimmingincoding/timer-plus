@@ -115,10 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeIosGuideBtn = document.getElementById('closeIosGuideBtn');
   const confirmIosGuideBtn = document.getElementById('confirmIosGuideBtn');
 
-  // PWA Banner
-  const pwaBanner = document.getElementById('pwaBanner');
-  const pwaInstallBtn = document.getElementById('pwaInstallBtn');
-  const pwaDismissBtn = document.getElementById('pwaDismissBtn');
+
 
   // Constants
   const DIAL_CIRCUMFERENCE = 2 * Math.PI * 115; // 722.56
@@ -1095,32 +1092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredInstallPrompt = e;
-    pwaBanner.classList.add('show');
-  });
 
-  pwaInstallBtn.addEventListener('click', async () => {
-    if (deferredInstallPrompt) {
-      pwaBanner.classList.remove('show');
-      deferredInstallPrompt.prompt();
-      const choice = await deferredInstallPrompt.userChoice;
-      console.log('User installation choice:', choice.outcome);
-      deferredInstallPrompt = null;
-    }
-  });
-
-  if (pwaDismissBtn) {
-    pwaDismissBtn.addEventListener('click', () => {
-      pwaBanner.classList.remove('show');
-    });
-  }
-
-  window.addEventListener('appinstalled', () => {
-    pwaBanner.classList.remove('show');
-    showToast('앱이 성공적으로 설치되었습니다!');
-  });
 
   // =========================================================================
   // KEYBOARD SHORTCUTS (Desktop / Tablet / Laptop support)

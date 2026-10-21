@@ -756,63 +756,22 @@ body {
   cursor: pointer;
 }
 
-/* PWA Install Notification Banner */
-.pwa-banner {
-  position: fixed;
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  left: 16px;
-  right: 16px;
-  max-width: 508px;
-  margin: 0 auto;
-  background: linear-gradient(135deg, #1b2433, #121822);
-  border: 1px solid rgba(0, 230, 118, 0.3);
-  border-radius: var(--radius-lg);
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  z-index: 90;
-  transform: translateY(150%);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.pwa-banner.show {
-  transform: translateY(0);
-}
-
-.pwa-banner-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.pwa-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-}
-
-.pwa-text h4 {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.pwa-text p {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.pwa-install-btn {
-  background: var(--color-work);
-  color: #07090c;
-  font-weight: 800;
-  font-size: 13px;
-  border: none;
-  border-radius: var(--radius-full);
-  padding: 8px 16px;
-  cursor: pointer;
+/* Completely hide Netlify Drawer / Feedback / Powered by Netlify badges */
+iframe[src*="netlify"],
+iframe[id*="netlify"],
+[data-netlify-drawer],
+#netlify-feedback,
+.netlify-badge,
+.netlify-drawer,
+netlify-drawer {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  z-index: -9999 !important;
 }
 
 /* iOS Safari PWA Installation Step Card */
