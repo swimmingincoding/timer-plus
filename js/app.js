@@ -228,6 +228,79 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
+  // BLUETOOTH / EARBUDS MEDIA SESSION & SILENT AUDIO KEEPALIVE
+  // =========================================================================
+  // Standard 1-second silent WAV loop to keep media session active on iOS/Android
+  const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+  silentAudio.loop = true;
+
+  function updateMediaSessionMetadata({ title, artist, album, state = 'playing' }) {
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: title || 'Timer+ 운동 타이머',
+          artist: artist || '운동 중',
+          album: album || 'TimerPlus',
+          artwork: [
+            { src: './icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: './icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+          ]
+        });
+        navigator.mediaSession.playbackState = state;
+      } catch (e) {
+        // Ignore media session errors
+      }
+    }
+
+    if (state === 'playing') {
+      silentAudio.play().catch(() => {});
+    } else {
+      silentAudio.pause();
+    }
+  }
+
+  // Central Control Actions (Used by Media Session and Keyboard Shortcuts)
+  function toggleCurrentTimer() {
+    if (currentActiveTab === 'interval') {
+      playBtn.click();
+    } else if (currentActiveTab === 'rounds') {
+      roundsPlayBtn.click();
+    } else if (currentActiveTab === 'stopwatch') {
+      stopwatchStartStopBtn.click();
+    }
+  }
+
+  function skipCurrentTimerNext() {
+    if (currentActiveTab === 'interval') {
+      nextBtn.click();
+    } else if (currentActiveTab === 'rounds') {
+      roundsNextBtn.click();
+    } else if (currentActiveTab === 'stopwatch') {
+      stopwatchLapResetBtn.click();
+    }
+  }
+
+  function skipCurrentTimerPrev() {
+    if (currentActiveTab === 'interval') {
+      prevBtn.click();
+    } else if (currentActiveTab === 'rounds') {
+      roundsPrevBtn.click();
+    }
+  }
+
+  // Bind Media Session hardware buttons (AirPods / Earbuds click)
+  if ('mediaSession' in navigator) {
+    try {
+      navigator.mediaSession.setActionHandler('play', () => toggleCurrentTimer());
+      navigator.mediaSession.setActionHandler('pause', () => toggleCurrentTimer());
+      navigator.mediaSession.setActionHandler('nexttrack', () => skipCurrentTimerNext());
+      navigator.mediaSession.setActionHandler('previoustrack', () => skipCurrentTimerPrev());
+    } catch (e) {
+      console.warn('MediaSession handler registration failed', e);
+    }
+  }
+
+  // =========================================================================
   // TAB NAVIGATION CONTROLLER
   // =========================================================================
   function switchTab(tabName) {
@@ -313,9 +386,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data.status === 'running') {
       playIcon.style.display = 'none';
       pauseIcon.style.display = 'block';
+      const theme = PHASE_THEMES[data.phase] || PHASE_THEMES.work;
+      updateMediaSessionMetadata({
+        title: `[${theme.label}] ${formatTime(data.phaseRemaining)}`,
+        artist: `라운드 ${data.round} / ${data.rounds}`,
+        album: storage.getActivePreset()?.name || '타바타 4분',
+        state: 'playing'
+      });
     } else {
       playIcon.style.display = 'block';
       pauseIcon.style.display = 'none';
+      updateMediaSessionMetadata({ state: 'paused' });
     }
   };
 
@@ -454,9 +535,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data.status === 'running') {
       roundsPlayIcon.style.display = 'none';
       roundsPauseIcon.style.display = 'block';
+      const phaseName = data.phase === 'round' ? 'FIGHT' : (data.phase === 'rest' ? 'REST' : '준비');
+      updateMediaSessionMetadata({
+        title: `[${phaseName}] ${formatTime(data.remaining)}`,
+        artist: `라운드 ${data.round} / ${data.totalRounds}`,
+        album: currentRoundsConfig.name || '복싱 라운드',
+        state: 'playing'
+      });
     } else {
       roundsPlayIcon.style.display = 'block';
       roundsPauseIcon.style.display = 'none';
+      updateMediaSessionMetadata({ state: 'paused' });
     }
   };
 
@@ -629,11 +718,18 @@ document.addEventListener('DOMContentLoaded', () => {
       stopwatchStopIcon.style.display = 'block';
       stopwatchStartStopBtn.style.background = '#ff5252';
       stopwatchLapResetLabel.textContent = '랩 (Lap)';
+      updateMediaSessionMetadata({
+        title: `[스톱워치] ${formatStopwatchTime(totalMs)}`,
+        artist: `현재 랩: ${formatStopwatchTime(currentLapMs)}`,
+        album: '스톱워치',
+        state: 'playing'
+      });
     } else {
       stopwatchStartIcon.style.display = 'block';
       stopwatchStopIcon.style.display = 'none';
       stopwatchStartStopBtn.style.background = 'var(--color-work)';
       stopwatchLapResetLabel.textContent = '초기화';
+      updateMediaSessionMetadata({ state: 'paused' });
     }
   };
 
@@ -1024,6 +1120,73 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('appinstalled', () => {
     pwaBanner.classList.remove('show');
     showToast('앱이 성공적으로 설치되었습니다!');
+  });
+
+  // =========================================================================
+  // KEYBOARD SHORTCUTS (Desktop / Tablet / Laptop support)
+  // =========================================================================
+  window.addEventListener('keydown', (e) => {
+    // Ignore keystrokes when typing inside text inputs
+    if (e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+    // Spacebar: Play / Pause active timer
+    if (e.code === 'Space') {
+      e.preventDefault();
+      toggleCurrentTimer();
+      return;
+    }
+
+    // Right Arrow: Next interval / round / lap
+    if (e.code === 'ArrowRight') {
+      e.preventDefault();
+      skipCurrentTimerNext();
+      return;
+    }
+
+    // Left Arrow: Previous interval / round
+    if (e.code === 'ArrowLeft') {
+      e.preventDefault();
+      skipCurrentTimerPrev();
+      return;
+    }
+
+    // R: Reset active timer
+    if (e.code === 'KeyR') {
+      e.preventDefault();
+      if (currentActiveTab === 'interval') {
+        resetBtn.click();
+      } else if (currentActiveTab === 'rounds') {
+        roundsResetBtn.click();
+      } else if (currentActiveTab === 'stopwatch') {
+        stopwatch.reset();
+        showToast('스톱워치가 초기화되었습니다.');
+      }
+      return;
+    }
+
+    // M: Toggle Sound (Mute)
+    if (e.code === 'KeyM') {
+      e.preventDefault();
+      soundQuickBtn.click();
+      return;
+    }
+
+    // 1, 2, 3: Fast Tab Switching
+    if (e.code === 'Digit1') {
+      switchTab('interval');
+      sound.playTap();
+      return;
+    }
+    if (e.code === 'Digit2') {
+      switchTab('rounds');
+      sound.playTap();
+      return;
+    }
+    if (e.code === 'Digit3') {
+      switchTab('stopwatch');
+      sound.playTap();
+      return;
+    }
   });
 
   // Initialize
