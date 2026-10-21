@@ -1,26 +1,41 @@
 /**
  * TimerPlus Application Controller
- * Orchestrates Timer, Audio Engine, Storage, Screen WakeLock, and PWA Installation.
+ * Orchestrates Interval Timer, Boxing Round Timer, Stopwatch,
+ * Audio Engine, Storage, Screen WakeLock, and PWA Installation.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Core Instances
+  // 1. Core Engines
   const timer = new WorkoutTimer();
+  const roundsTimer = new BoxingRoundTimer();
+  const stopwatch = new StopwatchEngine();
   const storage = window.storageManager;
   const sound = window.soundEngine;
 
-  // 2. DOM Elements
-  const ambientGlow = document.getElementById('ambientGlow');
-  const toastMsg = document.getElementById('toastMsg');
+  // 2. Navigation Tabs & Views
+  let currentActiveTab = 'interval'; // 'interval', 'rounds', 'stopwatch'
+  const tabInterval = document.getElementById('tabInterval');
+  const tabRounds = document.getElementById('tabRounds');
+  const tabStopwatch = document.getElementById('tabStopwatch');
+
+  const viewInterval = document.getElementById('viewInterval');
+  const viewRounds = document.getElementById('viewRounds');
+  const viewStopwatch = document.getElementById('viewStopwatch');
+
+  // Header Elements
   const headerRoutineName = document.getElementById('headerRoutineName');
+  const openPresetsBtn = document.getElementById('openPresetsBtn');
+  const headerRoundsConfigBtn = document.getElementById('headerRoundsConfigBtn');
+  const headerRoundsPresetName = document.getElementById('headerRoundsPresetName');
+  const headerStopwatchTitle = document.getElementById('headerStopwatchTitle');
   const soundQuickBtn = document.getElementById('soundQuickBtn');
   const soundIconOn = document.getElementById('soundIconOn');
   const soundIconOff = document.getElementById('soundIconOff');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
-  const openPresetsBtn = document.getElementById('openPresetsBtn');
   const openSettingsBtn = document.getElementById('openSettingsBtn');
+  const toastMsg = document.getElementById('toastMsg');
 
-  // Main Timer Display Elements
+  // Interval View Elements
   const phasePill = document.getElementById('phasePill');
   const roundDisplay = document.getElementById('roundDisplay');
   const setDisplay = document.getElementById('setDisplay');
@@ -29,11 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const mainTimeDisplay = document.getElementById('mainTimeDisplay');
   const totalRemainingDisplay = document.getElementById('totalRemainingDisplay');
   const nextUpText = document.getElementById('nextUpText');
-  const nextUpCard = document.getElementById('nextUpCard');
   const overallPercentText = document.getElementById('overallPercentText');
   const overallProgressBar = document.getElementById('overallProgressBar');
 
-  // Controls
   const prevBtn = document.getElementById('prevBtn');
   const playBtn = document.getElementById('playBtn');
   const playIcon = document.getElementById('playIcon');
@@ -43,6 +56,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const editCurrentRoutineBtn = document.getElementById('editCurrentRoutineBtn');
   const wakelockStatus = document.getElementById('wakelockStatus');
   const wakelockText = document.getElementById('wakelockText');
+
+  // Rounds View Elements
+  const roundsPhasePill = document.getElementById('roundsPhasePill');
+  const roundsRoundDisplay = document.getElementById('roundsRoundDisplay');
+  const roundsWarningBadge = document.getElementById('roundsWarningBadge');
+  const roundsDialProgressRing = document.getElementById('roundsDialProgressRing');
+  const roundsMainTimeDisplay = document.getElementById('roundsMainTimeDisplay');
+  const roundsSummaryHint = document.getElementById('roundsSummaryHint');
+  const roundsNextUpText = document.getElementById('roundsNextUpText');
+
+  const roundsPrevBtn = document.getElementById('roundsPrevBtn');
+  const roundsPlayBtn = document.getElementById('roundsPlayBtn');
+  const roundsPlayIcon = document.getElementById('roundsPlayIcon');
+  const roundsPauseIcon = document.getElementById('roundsPauseIcon');
+  const roundsNextBtn = document.getElementById('roundsNextBtn');
+  const roundsResetBtn = document.getElementById('roundsResetBtn');
+  const roundsQuickConfigBtn = document.getElementById('roundsQuickConfigBtn');
+
+  // Stopwatch View Elements
+  const stopwatchMainDisplay = document.getElementById('stopwatchMainDisplay');
+  const stopwatchCurrentLapDisplay = document.getElementById('stopwatchCurrentLapDisplay');
+  const stopwatchLapsList = document.getElementById('stopwatchLapsList');
+  const stopwatchLapResetBtn = document.getElementById('stopwatchLapResetBtn');
+  const stopwatchLapResetLabel = document.getElementById('stopwatchLapResetLabel');
+  const stopwatchStartStopBtn = document.getElementById('stopwatchStartStopBtn');
+  const stopwatchStartIcon = document.getElementById('stopwatchStartIcon');
+  const stopwatchStopIcon = document.getElementById('stopwatchStopIcon');
 
   // Modals
   const presetsModal = document.getElementById('presetsModal');
@@ -56,6 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const editNameInput = document.getElementById('editNameInput');
   const saveRoutineBtn = document.getElementById('saveRoutineBtn');
   const deleteRoutineBtn = document.getElementById('deleteRoutineBtn');
+
+  const roundsConfigModal = document.getElementById('roundsConfigModal');
+  const closeRoundsConfigBtn = document.getElementById('closeRoundsConfigBtn');
+  const saveRoundsConfigBtn = document.getElementById('saveRoundsConfigBtn');
+  const rcWarningToggle = document.getElementById('rcWarningToggle');
 
   const settingsModal = document.getElementById('settingsModal');
   const closeSettingsModalBtn = document.getElementById('closeSettingsModalBtn');
@@ -76,13 +121,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const pwaDismissBtn = document.getElementById('pwaDismissBtn');
 
   // Constants
-  const DIAL_CIRCUMFERENCE = 2 * Math.PI * 115; // r=115 -> 722.56
+  const DIAL_CIRCUMFERENCE = 2 * Math.PI * 115; // 722.56
   dialProgressRing.style.strokeDasharray = `${DIAL_CIRCUMFERENCE}`;
+  roundsDialProgressRing.style.strokeDasharray = `${DIAL_CIRCUMFERENCE}`;
 
   // State Variables
   let wakeLockSentinel = null;
   let deferredInstallPrompt = null;
-  let editingPreset = null; // null if creating new
+  let editingPreset = null;
   let currentEditorConfig = {
     work: 20,
     rest: 10,
@@ -93,42 +139,27 @@ document.addEventListener('DOMContentLoaded', () => {
     cooldown: 0
   };
 
-  // Phase Definitions & Styling
+  // Rounds Config State
+  let currentRoundsConfig = {
+    roundTime: 180,
+    restTime: 60,
+    totalRounds: 5,
+    warningTime: 10,
+    prepare: 10,
+    name: '복싱 3분 5라운드'
+  };
+
   const PHASE_THEMES = {
-    prepare: {
-      label: '준비',
-      color: '#00C2FF',
-      glow: 'rgba(0, 194, 255, 0.35)'
-    },
-    work: {
-      label: '운동 (WORK)',
-      color: '#00E676',
-      glow: 'rgba(0, 230, 118, 0.4)'
-    },
-    rest: {
-      label: '휴식 (REST)',
-      color: '#FF9100',
-      glow: 'rgba(255, 145, 0, 0.35)'
-    },
-    setRest: {
-      label: '세트 휴식',
-      color: '#B388FF',
-      glow: 'rgba(179, 136, 255, 0.35)'
-    },
-    cooldown: {
-      label: '마무리 쿨다운',
-      color: '#00B4D8',
-      glow: 'rgba(0, 180, 216, 0.35)'
-    },
-    finished: {
-      label: '운동 완료! 🎉',
-      color: '#FFD600',
-      glow: 'rgba(255, 214, 0, 0.45)'
-    }
+    prepare: { label: '준비', color: '#00C2FF', glow: 'rgba(0, 194, 255, 0.35)' },
+    work: { label: '운동 (WORK)', color: '#00E676', glow: 'rgba(0, 230, 118, 0.4)' },
+    rest: { label: '휴식 (REST)', color: '#FF9100', glow: 'rgba(255, 145, 0, 0.35)' },
+    setRest: { label: '세트 휴식', color: '#B388FF', glow: 'rgba(179, 136, 255, 0.35)' },
+    cooldown: { label: '마무리 쿨다운', color: '#00B4D8', glow: 'rgba(0, 180, 216, 0.35)' },
+    finished: { label: '운동 완료! 🎉', color: '#FFD600', glow: 'rgba(255, 214, 0, 0.45)' }
   };
 
   // =========================================================================
-  // Screen Wake Lock API (Crucial for mobile workouts)
+  // Screen Wake Lock API
   // =========================================================================
   async function requestWakeLock() {
     if ('wakeLock' in navigator) {
@@ -137,13 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
         wakelockText.textContent = '화면 유지 ON';
         wakelockStatus.style.color = 'var(--color-work)';
         wakeLockSentinel.addEventListener('release', () => {
-          if (timer.status !== 'running') {
+          if (timer.status !== 'running' && roundsTimer.status !== 'running' && stopwatch.status !== 'running') {
             wakelockText.textContent = '화면 유지 대기';
             wakelockStatus.style.color = 'var(--text-muted)';
           }
         });
       } catch (err) {
-        console.warn('Wake Lock request error:', err);
+        console.warn('Wake Lock error:', err);
       }
     }
   }
@@ -158,32 +189,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && timer.status === 'running') {
+    const isAnyRunning = timer.status === 'running' || roundsTimer.status === 'running' || stopwatch.status === 'running';
+    if (document.visibilityState === 'visible' && isAnyRunning) {
       requestWakeLock();
     }
   });
 
-  // =========================================================================
-  // Mobile Haptic Feedback
-  // =========================================================================
+  // Haptic feedback
   function triggerHaptic(pattern = [60]) {
     if ('vibrate' in navigator) {
-      try {
-        navigator.vibrate(pattern);
-      } catch (e) {
-        // Ignore vibration errors
-      }
+      try { navigator.vibrate(pattern); } catch (e) {}
     }
   }
 
-  // =========================================================================
   // Formatting Utilities
-  // =========================================================================
   function formatTime(totalSeconds) {
     const sec = Math.max(0, Math.round(totalSeconds));
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function formatStopwatchTime(ms) {
+    const totalCentis = Math.floor(ms / 10);
+    const centis = totalCentis % 100;
+    const totalSec = Math.floor(totalCentis / 100);
+    const sec = totalSec % 60;
+    const min = Math.floor(totalSec / 60);
+    return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(centis).padStart(2, '0')}`;
   }
 
   function showToast(text) {
@@ -195,39 +228,88 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // Timer Event Handlers
+  // TAB NAVIGATION CONTROLLER
+  // =========================================================================
+  function switchTab(tabName) {
+    currentActiveTab = tabName;
+
+    // Update bottom tabs
+    [tabInterval, tabRounds, tabStopwatch].forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+
+    // Update views
+    viewInterval.classList.toggle('active', tabName === 'interval');
+    viewRounds.classList.toggle('active', tabName === 'rounds');
+    viewStopwatch.classList.toggle('active', tabName === 'stopwatch');
+
+    // Update Header
+    if (tabName === 'interval') {
+      openPresetsBtn.style.display = 'flex';
+      headerRoundsConfigBtn.style.display = 'none';
+      headerStopwatchTitle.style.display = 'none';
+      // Sync Interval theme
+      const theme = PHASE_THEMES[timer.currentPhase] || PHASE_THEMES.work;
+      document.documentElement.style.setProperty('--active-phase-color', theme.color);
+      document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
+    } else if (tabName === 'rounds') {
+      openPresetsBtn.style.display = 'none';
+      headerRoundsConfigBtn.style.display = 'flex';
+      headerStopwatchTitle.style.display = 'none';
+      // Sync Rounds theme
+      syncRoundsTheme(roundsTimer.phase);
+    } else if (tabName === 'stopwatch') {
+      openPresetsBtn.style.display = 'none';
+      headerRoundsConfigBtn.style.display = 'none';
+      headerStopwatchTitle.style.display = 'block';
+      document.documentElement.style.setProperty('--active-phase-color', '#00E676');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(0, 230, 118, 0.35)');
+    }
+  }
+
+  tabInterval.addEventListener('click', () => {
+    sound.playTap();
+    switchTab('interval');
+  });
+
+  tabRounds.addEventListener('click', () => {
+    sound.playTap();
+    switchTab('rounds');
+  });
+
+  tabStopwatch.addEventListener('click', () => {
+    sound.playTap();
+    switchTab('stopwatch');
+  });
+
+  // =========================================================================
+  // 1. INTERVAL TIMER CONTROLLER
   // =========================================================================
   timer.onTick = (data) => {
-    // 1. Time display
-    mainTimeDisplay.textContent = formatTime(data.phaseRemaining);
-    totalRemainingDisplay.textContent = formatTime(data.totalRemaining);
+    if (currentActiveTab === 'interval') {
+      mainTimeDisplay.textContent = formatTime(data.phaseRemaining);
+      totalRemainingDisplay.textContent = formatTime(data.totalRemaining);
 
-    // 2. Radial Progress Ring
-    // Progress starts full and reduces to 0 like an athletic countdown dial
-    const remainingFraction = data.phaseDuration > 0
-      ? data.phaseRemainingPrecise / data.phaseDuration
-      : 0;
-    const offset = DIAL_CIRCUMFERENCE * (1 - remainingFraction);
-    dialProgressRing.style.strokeDashoffset = `${offset}`;
+      const remainingFraction = data.phaseDuration > 0
+        ? data.phaseRemainingPrecise / data.phaseDuration
+        : 0;
+      dialProgressRing.style.strokeDashoffset = `${DIAL_CIRCUMFERENCE * (1 - remainingFraction)}`;
 
-    // 3. Rounds and Sets display
-    roundDisplay.textContent = `${data.round} / ${data.rounds}`;
-    setDisplay.textContent = `${data.set} / ${data.sets}`;
-    setDisplayWrapper.style.display = data.sets > 1 ? 'block' : 'none';
+      roundDisplay.textContent = `${data.round} / ${data.rounds}`;
+      setDisplay.textContent = `${data.set} / ${data.sets}`;
+      setDisplayWrapper.style.display = data.sets > 1 ? 'block' : 'none';
 
-    // 4. Overall Linear Progress
-    const pct = Math.min(100, Math.round(data.totalProgress * 100));
-    overallPercentText.textContent = `${pct}%`;
-    overallProgressBar.style.width = `${pct}%`;
+      const pct = Math.min(100, Math.round(data.totalProgress * 100));
+      overallPercentText.textContent = `${pct}%`;
+      overallProgressBar.style.width = `${pct}%`;
 
-    // 5. Next Phase preview
-    if (data.status === 'finished') {
-      nextUpText.textContent = '운동 완료!';
-    } else if (data.nextInfo) {
-      nextUpText.textContent = `${data.nextInfo.label} (${formatTime(data.nextInfo.duration)})`;
+      if (data.status === 'finished') {
+        nextUpText.textContent = '운동 완료!';
+      } else if (data.nextInfo) {
+        nextUpText.textContent = `${data.nextInfo.label} (${formatTime(data.nextInfo.duration)})`;
+      }
     }
 
-    // 6. Play/Pause Button State
     if (data.status === 'running') {
       playIcon.style.display = 'none';
       pauseIcon.style.display = 'block';
@@ -239,13 +321,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   timer.onPhaseChange = (phaseInfo) => {
     const theme = PHASE_THEMES[phaseInfo.phase] || PHASE_THEMES.work;
+    if (currentActiveTab === 'interval') {
+      document.documentElement.style.setProperty('--active-phase-color', theme.color);
+      document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
+      phasePill.textContent = theme.label;
+    }
 
-    // Update CSS variables for dynamic color changing theme
-    document.documentElement.style.setProperty('--active-phase-color', theme.color);
-    document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
-    phasePill.textContent = theme.label;
-
-    // Audio & Haptic reactions
     if (phaseInfo.phase === 'work') {
       sound.playWorkStart();
       triggerHaptic([100, 50, 100]);
@@ -271,32 +352,29 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playComplete();
     triggerHaptic([200, 100, 200, 100, 400]);
 
-    const theme = PHASE_THEMES.finished;
-    document.documentElement.style.setProperty('--active-phase-color', theme.color);
-    document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
-    phasePill.textContent = theme.label;
+    if (currentActiveTab === 'interval') {
+      const theme = PHASE_THEMES.finished;
+      document.documentElement.style.setProperty('--active-phase-color', theme.color);
+      document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
+      phasePill.textContent = theme.label;
+    }
     showToast('🎉 운동을 성공적으로 완료했습니다!');
   };
 
-  // =========================================================================
-  // Load Active Routine
-  // =========================================================================
   function loadActivePreset() {
     const preset = storage.getActivePreset();
     if (!preset) return;
-
     headerRoutineName.textContent = preset.name;
     timer.setConfig(preset);
 
-    const theme = PHASE_THEMES[timer.currentPhase] || PHASE_THEMES.work;
-    document.documentElement.style.setProperty('--active-phase-color', theme.color);
-    document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
-    phasePill.textContent = theme.label;
+    if (currentActiveTab === 'interval') {
+      const theme = PHASE_THEMES[timer.currentPhase] || PHASE_THEMES.work;
+      document.documentElement.style.setProperty('--active-phase-color', theme.color);
+      document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
+      phasePill.textContent = theme.label;
+    }
   }
 
-  // =========================================================================
-  // Button Event Listeners
-  // =========================================================================
   playBtn.addEventListener('click', () => {
     sound.playTap();
     if (timer.status === 'running') {
@@ -322,10 +400,308 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playTap();
     timer.reset();
     releaseWakeLock();
-    showToast('타이머가 초기화되었습니다.');
+    showToast('인터벌 타이머가 초기화되었습니다.');
   });
 
-  // Sound Quick Toggle in Header
+  // =========================================================================
+  // 2. BOXING ROUNDS TIMER CONTROLLER
+  // =========================================================================
+  function syncRoundsTheme(phase) {
+    if (phase === 'round') {
+      document.documentElement.style.setProperty('--active-phase-color', '#00E676');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(0, 230, 118, 0.4)');
+      roundsPhasePill.textContent = 'FIGHT (라운드)';
+    } else if (phase === 'rest') {
+      document.documentElement.style.setProperty('--active-phase-color', '#FF9100');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(255, 145, 0, 0.35)');
+      roundsPhasePill.textContent = 'REST (휴식)';
+    } else if (phase === 'prepare') {
+      document.documentElement.style.setProperty('--active-phase-color', '#00C2FF');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(0, 194, 255, 0.35)');
+      roundsPhasePill.textContent = '준비';
+    } else if (phase === 'finished') {
+      document.documentElement.style.setProperty('--active-phase-color', '#FFD600');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(255, 214, 0, 0.45)');
+      roundsPhasePill.textContent = '매치 완료! 🏆';
+    }
+  }
+
+  roundsTimer.onTick = (data) => {
+    if (currentActiveTab === 'rounds') {
+      roundsMainTimeDisplay.textContent = formatTime(data.remaining);
+      roundsRoundDisplay.textContent = `${data.round} / ${data.totalRounds}`;
+
+      const remainingFraction = data.duration > 0
+        ? data.remainingPrecise / data.duration
+        : 0;
+      roundsDialProgressRing.style.strokeDashoffset = `${DIAL_CIRCUMFERENCE * (1 - remainingFraction)}`;
+
+      if (data.phase === 'prepare') {
+        roundsNextUpText.textContent = `1라운드 시작 (${formatTime(roundsTimer.config.roundTime)})`;
+      } else if (data.phase === 'round') {
+        if (data.round < data.totalRounds) {
+          roundsNextUpText.textContent = `휴식 (${formatTime(roundsTimer.config.restTime)})`;
+        } else {
+          roundsNextUpText.textContent = '최종 라운드 종료';
+        }
+      } else if (data.phase === 'rest') {
+        roundsNextUpText.textContent = `${data.round + 1}라운드 시작 (${formatTime(roundsTimer.config.roundTime)})`;
+      } else {
+        roundsNextUpText.textContent = '경기 완료';
+      }
+    }
+
+    if (data.status === 'running') {
+      roundsPlayIcon.style.display = 'none';
+      roundsPauseIcon.style.display = 'block';
+    } else {
+      roundsPlayIcon.style.display = 'block';
+      roundsPauseIcon.style.display = 'none';
+    }
+  };
+
+  roundsTimer.onPhaseChange = ({ phase, round, totalRounds }) => {
+    roundsWarningBadge.style.display = 'none';
+
+    if (currentActiveTab === 'rounds') {
+      syncRoundsTheme(phase);
+    }
+
+    if (phase === 'round') {
+      sound.playBoxingBell();
+      triggerHaptic([150, 80, 150]);
+    } else if (phase === 'rest') {
+      sound.playRoundEndBell();
+      triggerHaptic([100]);
+    }
+  };
+
+  roundsTimer.onWarning = () => {
+    roundsWarningBadge.style.display = 'inline-block';
+    sound.playWarningClapper();
+    triggerHaptic([70, 70]);
+  };
+
+  roundsTimer.onCountdownBeep = (sec) => {
+    sound.playCountdownBeep(sec);
+    triggerHaptic([40]);
+  };
+
+  roundsTimer.onComplete = () => {
+    releaseWakeLock();
+    sound.playComplete();
+    triggerHaptic([200, 100, 200, 100, 400]);
+    if (currentActiveTab === 'rounds') {
+      syncRoundsTheme('finished');
+    }
+    showToast('🏆 전 라운드가 종료되었습니다!');
+  };
+
+  roundsPlayBtn.addEventListener('click', () => {
+    sound.playTap();
+    if (roundsTimer.status === 'running') {
+      roundsTimer.pause();
+      releaseWakeLock();
+    } else {
+      roundsTimer.start();
+      requestWakeLock();
+    }
+  });
+
+  roundsPrevBtn.addEventListener('click', () => {
+    sound.playTap();
+    roundsTimer.skipPrev();
+  });
+
+  roundsNextBtn.addEventListener('click', () => {
+    sound.playTap();
+    roundsTimer.skipNext();
+  });
+
+  roundsResetBtn.addEventListener('click', () => {
+    sound.playTap();
+    roundsTimer.reset();
+    roundsWarningBadge.style.display = 'none';
+    releaseWakeLock();
+    showToast('라운드 타이머가 초기화되었습니다.');
+  });
+
+  function updateRoundsSummaryUI() {
+    const c = currentRoundsConfig;
+    roundsSummaryHint.textContent = `${formatTime(c.roundTime)} 운동 / ${formatTime(c.restTime)} 휴식`;
+    headerRoundsPresetName.textContent = c.name;
+    document.getElementById('valRcRoundTime').textContent = formatTime(c.roundTime);
+    document.getElementById('valRcRestTime').textContent = formatTime(c.restTime);
+    document.getElementById('valRcRounds').textContent = c.totalRounds;
+    rcWarningToggle.checked = c.warningTime > 0;
+  }
+
+  function openRoundsConfigModal() {
+    updateRoundsSummaryUI();
+    roundsConfigModal.classList.add('active');
+  }
+
+  roundsQuickConfigBtn.addEventListener('click', () => {
+    sound.playTap();
+    openRoundsConfigModal();
+  });
+
+  headerRoundsConfigBtn.addEventListener('click', () => {
+    sound.playTap();
+    openRoundsConfigModal();
+  });
+
+  closeRoundsConfigBtn.addEventListener('click', () => {
+    roundsConfigModal.classList.remove('active');
+  });
+
+  roundsConfigModal.addEventListener('click', (e) => {
+    if (e.target === roundsConfigModal) roundsConfigModal.classList.remove('active');
+  });
+
+  // Quick preset buttons for boxing
+  document.querySelectorAll('.round-quick-preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sound.playTap();
+      currentRoundsConfig.roundTime = parseInt(btn.dataset.rtime, 10);
+      currentRoundsConfig.restTime = parseInt(btn.dataset.rest, 10);
+      currentRoundsConfig.totalRounds = parseInt(btn.dataset.rounds, 10);
+      currentRoundsConfig.name = btn.dataset.name;
+      updateRoundsSummaryUI();
+    });
+  });
+
+  // Steppers for rounds config
+  document.querySelectorAll('#roundsConfigModal .step-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sound.playTap();
+      const step = parseInt(btn.dataset.step, 10);
+      const target = btn.dataset.target;
+
+      if (target === 'rcRoundTime') {
+        currentRoundsConfig.roundTime = Math.max(30, currentRoundsConfig.roundTime + step);
+      } else if (target === 'rcRestTime') {
+        currentRoundsConfig.restTime = Math.max(0, currentRoundsConfig.restTime + step);
+      } else if (target === 'rcRounds') {
+        currentRoundsConfig.totalRounds = Math.max(1, Math.min(25, currentRoundsConfig.totalRounds + step));
+      }
+      currentRoundsConfig.name = '커스텀 라운드';
+      updateRoundsSummaryUI();
+    });
+  });
+
+  saveRoundsConfigBtn.addEventListener('click', () => {
+    sound.playTap();
+    currentRoundsConfig.warningTime = rcWarningToggle.checked ? 10 : 0;
+    roundsTimer.setConfig({
+      roundTime: currentRoundsConfig.roundTime,
+      restTime: currentRoundsConfig.restTime,
+      totalRounds: currentRoundsConfig.totalRounds,
+      warningTime: currentRoundsConfig.warningTime,
+      prepare: 10
+    });
+    roundsConfigModal.classList.remove('active');
+    updateRoundsSummaryUI();
+    showToast('새 라운드 설정이 적용되었습니다.');
+  });
+
+  // Initialize Rounds timer
+  roundsTimer.setConfig({
+    roundTime: currentRoundsConfig.roundTime,
+    restTime: currentRoundsConfig.restTime,
+    totalRounds: currentRoundsConfig.totalRounds,
+    warningTime: 10,
+    prepare: 10
+  });
+  updateRoundsSummaryUI();
+
+  // =========================================================================
+  // 3. STOPWATCH CONTROLLER
+  // =========================================================================
+  stopwatch.onTick = (totalMs, currentLapMs, status) => {
+    if (currentActiveTab === 'stopwatch') {
+      stopwatchMainDisplay.textContent = formatStopwatchTime(totalMs);
+      stopwatchCurrentLapDisplay.textContent = formatStopwatchTime(currentLapMs);
+    }
+
+    if (status === 'running') {
+      stopwatchStartIcon.style.display = 'none';
+      stopwatchStopIcon.style.display = 'block';
+      stopwatchStartStopBtn.style.background = '#ff5252';
+      stopwatchLapResetLabel.textContent = '랩 (Lap)';
+    } else {
+      stopwatchStartIcon.style.display = 'block';
+      stopwatchStopIcon.style.display = 'none';
+      stopwatchStartStopBtn.style.background = 'var(--color-work)';
+      stopwatchLapResetLabel.textContent = '초기화';
+    }
+  };
+
+  stopwatch.onLap = (newLap, laps, analysis) => {
+    renderLapsList(laps, analysis);
+  };
+
+  stopwatch.onReset = () => {
+    stopwatchLapsList.innerHTML = `
+      <div class="lap-empty-state">
+        시작 후 랩(Lap) 버튼을 누르면 구간 기록이 저장됩니다.
+      </div>
+    `;
+  };
+
+  function renderLapsList(laps, analysis) {
+    if (laps.length === 0) {
+      stopwatch.onReset();
+      return;
+    }
+
+    stopwatchLapsList.innerHTML = '';
+    laps.forEach((lap, idx) => {
+      const isFastest = idx === analysis.fastestIndex;
+      const isSlowest = idx === analysis.slowestIndex;
+
+      const item = document.createElement('div');
+      item.className = `lap-item ${isFastest ? 'lap-fastest' : ''} ${isSlowest ? 'lap-slowest' : ''}`;
+
+      item.innerHTML = `
+        <span>랩 ${lap.index}</span>
+        <span style="text-align:center;">
+          ${formatStopwatchTime(lap.lapTime)}
+          ${isFastest ? '<small style="margin-left:4px;">(최고)</small>' : ''}
+          ${isSlowest ? '<small style="margin-left:4px;">(최저)</small>' : ''}
+        </span>
+        <span style="text-align:right;">${formatStopwatchTime(lap.totalTime)}</span>
+      `;
+
+      stopwatchLapsList.appendChild(item);
+    });
+  }
+
+  stopwatchStartStopBtn.addEventListener('click', () => {
+    sound.playTap();
+    if (stopwatch.status === 'running') {
+      stopwatch.pause();
+      releaseWakeLock();
+    } else {
+      stopwatch.start();
+      requestWakeLock();
+    }
+  });
+
+  stopwatchLapResetBtn.addEventListener('click', () => {
+    sound.playTap();
+    if (stopwatch.status === 'running') {
+      stopwatch.recordLap();
+      triggerHaptic([40]);
+    } else {
+      stopwatch.reset();
+      showToast('스톱워치가 초기화되었습니다.');
+    }
+  });
+
+  // =========================================================================
+  // GENERAL CONTROLS & MODALS (Settings, Sound, Routine Presets)
+  // =========================================================================
   function updateSoundIcon() {
     if (sound.isMuted || sound.soundMode === 'mute') {
       soundIconOn.style.display = 'none';
@@ -345,7 +721,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(sound.isMuted ? '소리 꺼짐 (무음)' : '소리 켜짐');
   });
 
-  // Fullscreen Toggle
   fullscreenBtn.addEventListener('click', () => {
     sound.playTap();
     if (!document.fullscreenElement) {
@@ -355,20 +730,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // =========================================================================
-  // Routine Presets Drawer
-  // =========================================================================
+  // Presets Modal
   function renderPresetsList() {
     const presets = storage.getPresets();
     const activeId = storage.activePresetId;
 
     presetsListContainer.innerHTML = '';
-
     presets.forEach((p) => {
       const card = document.createElement('div');
       card.className = `preset-card ${p.id === activeId ? 'active' : ''}`;
 
-      // Calculate total duration for badge
       const totalSec = (p.prepare || 0) + (p.cooldown || 0) +
         (p.sets * ((p.work * p.rounds) + (p.rest * (p.rounds - 1)))) +
         ((p.sets - 1) * (p.setRest || 0));
@@ -396,7 +767,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-      // Select preset on card click
       card.addEventListener('click', (e) => {
         if (e.target.closest('.edit-preset-btn')) return;
         sound.playTap();
@@ -406,7 +776,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`'${p.name}' 루틴이 선택되었습니다.`);
       });
 
-      // Edit preset button
       const editBtn = card.querySelector('.edit-preset-btn');
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -433,9 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === presetsModal) presetsModal.classList.remove('active');
   });
 
-  // =========================================================================
   // Routine Editor Logic
-  // =========================================================================
   function updateEditorDisplay() {
     document.getElementById('valEditWork').textContent = formatTime(currentEditorConfig.work);
     document.getElementById('valEditRest').textContent = formatTime(currentEditorConfig.rest);
@@ -479,8 +846,7 @@ document.addEventListener('DOMContentLoaded', () => {
     editorModal.classList.add('active');
   }
 
-  // Stepper buttons in Editor
-  document.querySelectorAll('.step-btn').forEach(btn => {
+  document.querySelectorAll('#editorModal .step-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       sound.playTap();
       const step = parseInt(btn.dataset.step, 10);
@@ -548,12 +914,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === editorModal) editorModal.classList.remove('active');
   });
 
-  // =========================================================================
-  // Settings & Audio Modal
-  // =========================================================================
+  // Settings Modal
   openSettingsBtn.addEventListener('click', () => {
     sound.playTap();
-    // Sync UI with current sound settings
     volumeSlider.value = Math.round(sound.volume * 100);
     volumePercentText.textContent = `${Math.round(sound.volume * 100)}%`;
 
@@ -572,7 +935,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === settingsModal) settingsModal.classList.remove('active');
   });
 
-  // Segmented sound mode buttons
   document.querySelectorAll('.seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       sound.playTap();
@@ -585,7 +947,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Volume slider
   volumeSlider.addEventListener('input', (e) => {
     const val = parseInt(e.target.value, 10);
     sound.volume = val / 100;
@@ -593,7 +954,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.saveSettings();
   });
 
-  // Test sound triggers
   testBellBtn.addEventListener('click', () => {
     sound.playBoxingBell();
   });
@@ -613,7 +973,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // iOS Guide Modal
   openIosGuideBtn.addEventListener('click', () => {
     settingsModal.classList.remove('active');
     iosGuideModal.classList.add('active');
@@ -627,9 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
     iosGuideModal.classList.remove('active');
   });
 
-  // =========================================================================
   // PWA Service Worker & Installation
-  // =========================================================================
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
@@ -637,12 +994,11 @@ document.addEventListener('DOMContentLoaded', () => {
           console.log('[PWA] Service Worker registered with scope:', reg.scope);
         })
         .catch((err) => {
-          console.warn('[PWA] Service Worker registration failed:', err);
+          console.warn('[PWA] Service Worker error:', err);
         });
     });
   }
 
-  // Handle Chrome / Android PWA beforeinstallprompt
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
@@ -670,16 +1026,8 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('앱이 성공적으로 설치되었습니다!');
   });
 
-  // Detect iOS Safari to show helpful tip
-  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-  if (isIos && !isStandalone) {
-    console.log('iOS Safari detected without standalone mode');
-  }
-
-  // =========================================================================
-  // Initialize App
-  // =========================================================================
+  // Initialize
   loadActivePreset();
   updateSoundIcon();
+  switchTab('interval');
 });

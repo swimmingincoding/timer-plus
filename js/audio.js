@@ -151,6 +151,44 @@ class SoundEngine {
     });
   }
 
+  // Boxing 10-Second Warning Wood Clapper (두 번의 나무 타격음)
+  playWarningClapper() {
+    if (this.isMuted || this.soundMode === 'mute') return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    const playClick = (timeOffset) => {
+      const t = this.ctx.currentTime + timeOffset;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(420, t);
+      osc.frequency.exponentialRampToValueAtTime(120, t + 0.05);
+
+      gain.gain.setValueAtTime(this.volume * 0.7, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.07);
+    };
+
+    playClick(0);
+    playClick(0.18);
+  }
+
+  // Round End Double Bell
+  playRoundEndBell() {
+    if (this.isMuted || this.soundMode === 'mute') return;
+    this.playBoxingBell();
+    setTimeout(() => {
+      this.playBoxingBell();
+    }, 280);
+  }
+
   // REST Interval Start - Softer descending tone
   playRestStart() {
     if (this.isMuted || this.soundMode === 'mute') return;

@@ -758,7 +758,7 @@ body {
 /* PWA Install Notification Banner */
 .pwa-banner {
   position: fixed;
-  bottom: 16px;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   left: 16px;
   right: 16px;
   max-width: 508px;
@@ -766,7 +766,7 @@ body {
   background: linear-gradient(135deg, #1b2433, #121822);
   border: 1px solid rgba(0, 230, 118, 0.3);
   border-radius: var(--radius-lg);
-  padding: 12px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -890,3 +890,179 @@ body {
     height: 68px;
   }
 }
+
+/* ==========================================================================
+   Bottom Navigation Tab Bar
+   ========================================================================== */
+.bottom-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(14, 18, 25, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border-subtle);
+  padding: 6px 16px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  width: 100%;
+}
+
+.nav-tab {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: var(--radius-md);
+  transition: var(--transition-fast);
+  flex: 1;
+  max-width: 120px;
+}
+
+.nav-tab svg {
+  width: 22px;
+  height: 22px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-tab span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.nav-tab:hover {
+  color: var(--text-secondary);
+}
+
+.nav-tab.active {
+  color: var(--color-work);
+}
+
+.nav-tab.active svg {
+  transform: translateY(-2px);
+}
+
+/* View Tab Switching */
+.tab-view {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 12px 16px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.tab-view.active {
+  display: flex;
+}
+
+/* ==========================================================================
+   Stopwatch View & Lap Table
+   ========================================================================== */
+.stopwatch-display-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 18px 0 10px 0;
+  position: relative;
+}
+
+.stopwatch-main-time {
+  font-size: clamp(52px, 15vw, 76px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -2px;
+  line-height: 1;
+  color: var(--text-primary);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.stopwatch-current-lap {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stopwatch-current-lap span {
+  color: var(--color-prepare);
+}
+
+.stopwatch-laps-card {
+  width: 100%;
+  max-width: 440px;
+  flex: 1;
+  max-height: 38dvh;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.laps-header {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.laps-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.lap-item {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  align-items: center;
+}
+
+.lap-item:last-child {
+  border-bottom: none;
+}
+
+.lap-fastest {
+  color: var(--color-work);
+  background: rgba(0, 230, 118, 0.06);
+}
+
+.lap-slowest {
+  color: #ff5252;
+  background: rgba(255, 82, 82, 0.06);
+}
+
+.lap-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 24px;
+  text-align: center;
+}
+
