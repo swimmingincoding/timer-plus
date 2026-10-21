@@ -146,6 +146,15 @@ document.addEventListener('DOMContentLoaded', () => {
     name: '복싱 3분 5라운드'
   };
 
+  try {
+    const savedRounds = localStorage.getItem('timerplus_last_rounds_config');
+    if (savedRounds) {
+      currentRoundsConfig = { ...currentRoundsConfig, ...JSON.parse(savedRounds) };
+    }
+  } catch (e) {
+    console.warn('Failed to load saved rounds config', e);
+  }
+
   const PHASE_THEMES = {
     prepare: { label: '준비', color: '#00C2FF', glow: 'rgba(0, 194, 255, 0.35)' },
     work: { label: '운동 (WORK)', color: '#00E676', glow: 'rgba(0, 230, 118, 0.4)' },
@@ -302,6 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   function switchTab(tabName) {
     currentActiveTab = tabName;
+    try {
+      localStorage.setItem('timerplus_last_active_tab', tabName);
+    } catch (e) {}
 
     // Update bottom tabs
     [tabInterval, tabRounds, tabStopwatch].forEach(tab => {
@@ -322,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const theme = PHASE_THEMES[timer.currentPhase] || PHASE_THEMES.work;
       document.documentElement.style.setProperty('--active-phase-color', theme.color);
       document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
+      phasePill.textContent = theme.label;
     } else if (tabName === 'rounds') {
       openPresetsBtn.style.display = 'none';
       headerRoundsConfigBtn.style.display = 'flex';
@@ -375,6 +388,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.status === 'finished') {
         nextUpText.textContent = '운동 완료!';
+      } else if (data.status === 'idle' && timer.config.prepare > 0) {
+        nextUpText.textContent = `시작 시 준비 ${formatTime(timer.config.prepare)}`;
       } else if (data.nextInfo) {
         nextUpText.textContent = `${data.nextInfo.label} (${formatTime(data.nextInfo.duration)})`;
       }
@@ -459,6 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
       timer.pause();
       releaseWakeLock();
     } else {
+      storage.saveLastWorkout(storage.getActivePreset());
       timer.start();
       requestWakeLock();
     }
@@ -517,7 +533,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data.phase === 'prepare') {
         roundsNextUpText.textContent = `1라운드 시작 (${formatTime(roundsTimer.config.roundTime)})`;
       } else if (data.phase === 'round') {
-        if (data.round < data.totalRounds) {
+        if (data.status === 'idle' && roundsTimer.config.prepare > 0) {
+          roundsNextUpText.textContent = `시작 시 준비 ${formatTime(roundsTimer.config.prepare)}`;
+        } else if (data.round < data.totalRounds) {
           roundsNextUpText.textContent = `휴식 (${formatTime(roundsTimer.config.restTime)})`;
         } else {
           roundsNextUpText.textContent = '최종 라운드 종료';
@@ -589,6 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
       roundsTimer.pause();
       releaseWakeLock();
     } else {
+      localStorage.setItem('timerplus_last_rounds_config', JSON.stringify(currentRoundsConfig));
       roundsTimer.start();
       requestWakeLock();
     }
@@ -686,6 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
       warningTime: currentRoundsConfig.warningTime,
       prepare: 10
     });
+    localStorage.setItem('timerplus_last_rounds_config', JSON.stringify(currentRoundsConfig));
     roundsConfigModal.classList.remove('active');
     updateRoundsSummaryUI();
     showToast('새 라운드 설정이 적용되었습니다.');
@@ -1164,5 +1184,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize
   loadActivePreset();
   updateSoundIcon();
-  switchTab('interval');
+  const savedTab = localStorage.getItem('timerplus_last_active_tab') || 'interval';
+  switchTab(savedTab);
 });

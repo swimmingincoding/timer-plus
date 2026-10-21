@@ -71,16 +71,10 @@ class WorkoutTimer {
     this.totalDuration = this.calculateTotalDuration();
     this.totalElapsed = 0;
 
-    // Start with prepare if > 0, else work
-    if (this.config.prepare > 0) {
-      this.currentPhase = 'prepare';
-      this.phaseDuration = this.config.prepare;
-    } else {
-      this.currentPhase = 'work';
-      this.phaseDuration = this.config.work;
-    }
-
-    this.phaseRemaining = this.phaseDuration;
+    // In idle state, display the WORK interval so the user immediately sees their configured workout time
+    this.currentPhase = 'work';
+    this.phaseDuration = this.config.work;
+    this.phaseRemaining = this.config.work;
     this.lastBeepSecond = null;
 
     this.notifyTick();
@@ -90,7 +84,21 @@ class WorkoutTimer {
     if (this.status === 'running') return;
 
     if (this.status === 'idle' || this.status === 'finished') {
-      this.reset();
+      this.currentRound = 1;
+      this.currentSet = 1;
+      this.totalDuration = this.calculateTotalDuration();
+      this.totalElapsed = 0;
+
+      // When starting, if prepare time is configured, start with prepare countdown
+      if (this.config.prepare > 0) {
+        this.currentPhase = 'prepare';
+        this.phaseDuration = this.config.prepare;
+        this.phaseRemaining = this.config.prepare;
+      } else {
+        this.currentPhase = 'work';
+        this.phaseDuration = this.config.work;
+        this.phaseRemaining = this.config.work;
+      }
     }
 
     this.status = 'running';

@@ -78,6 +78,7 @@ class StorageManager {
   constructor() {
     this.STORAGE_KEY = 'timerplus_presets_v1';
     this.ACTIVE_ID_KEY = 'timerplus_active_preset_id';
+    this.LAST_WORKOUT_KEY = 'timerplus_last_active_workout';
     this.presets = [];
     this.activePresetId = null;
 
@@ -94,8 +95,31 @@ class StorageManager {
         this.savePresets();
       }
 
-      this.activePresetId = localStorage.getItem(this.ACTIVE_ID_KEY) || this.presets[0].id;
-      // If active preset doesn't exist anymore, pick first
+      // 1. Check if an explicit last configured/used workout is saved
+      const lastWorkoutRaw = localStorage.getItem(this.LAST_WORKOUT_KEY);
+      if (lastWorkoutRaw) {
+        try {
+          const lastWorkout = JSON.parse(lastWorkoutRaw);
+          if (lastWorkout && lastWorkout.id) {
+            this.activePresetId = lastWorkout.id;
+            // Ensure presets list has the latest version of this workout
+            const existingIdx = this.presets.findIndex(p => p.id === lastWorkout.id);
+            if (existingIdx !== -1) {
+              this.presets[existingIdx] = { ...this.presets[existingIdx], ...lastWorkout };
+            } else {
+              this.presets.unshift(lastWorkout);
+            }
+            this.savePresets();
+          }
+        } catch (err) {
+          console.warn('Failed to parse last workout', err);
+        }
+      }
+
+      if (!this.activePresetId) {
+        this.activePresetId = localStorage.getItem(this.ACTIVE_ID_KEY) || this.presets[0].id;
+      }
+
       if (!this.getActivePreset()) {
         this.activePresetId = this.presets[0]?.id || 'tabata-classic';
       }
@@ -119,41 +143,71 @@ class StorageManager {
   }
 
   getActivePreset() {
-    return this.presets.find(p => p.id === this.activePresetId) || this.presets[0];
+    // Check presets by activePresetId
+    const found = this.presets.find(p => p.id === this.activePresetId);
+    if (found) return found;
+
+    // Fallback to last workout or first preset
+    try {
+      const saved = localStorage.getItem(this.LAST_WORKOUT_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+
+    return this.presets[0];
   }
 
   setActivePresetId(id) {
-    if (this.presets.some(p => p.id === id)) {
+    const preset = this.presets.find(p => p.id === id);
+    if (preset) {
       this.activePresetId = id;
       localStorage.setItem(this.ACTIVE_ID_KEY, id);
-      return this.getActivePreset();
+      localStorage.setItem(this.LAST_WORKOUT_KEY, JSON.stringify(preset));
+      return preset;
     }
     return null;
   }
 
   savePreset(presetData) {
+    let targetPreset = null;
+
     if (presetData.id) {
       // Update existing
       const index = this.presets.findIndex(p => p.id === presetData.id);
       if (index !== -1) {
         this.presets[index] = { ...this.presets[index], ...presetData };
-        this.savePresets();
-        return this.presets[index];
+        targetPreset = this.presets[index];
       }
     }
 
-    // Create new
-    const newPreset = {
-      ...presetData,
-      id: 'custom-' + Date.now(),
-      isBuiltin: false,
-      tag: presetData.tag || '커스텀'
-    };
-    this.presets.push(newPreset);
-    this.activePresetId = newPreset.id;
+    if (!targetPreset) {
+      // Create new
+      targetPreset = {
+        ...presetData,
+        id: 'custom-' + Date.now(),
+        isBuiltin: false,
+        tag: presetData.tag || '커스텀'
+      };
+      this.presets.push(targetPreset);
+    }
+
+    this.activePresetId = targetPreset.id;
     this.savePresets();
-    localStorage.setItem(this.ACTIVE_ID_KEY, newPreset.id);
-    return newPreset;
+    localStorage.setItem(this.ACTIVE_ID_KEY, targetPreset.id);
+    localStorage.setItem(this.LAST_WORKOUT_KEY, JSON.stringify(targetPreset));
+    return targetPreset;
+  }
+
+  saveLastWorkout(workout) {
+    if (!workout) return;
+    try {
+      localStorage.setItem(this.LAST_WORKOUT_KEY, JSON.stringify(workout));
+      if (workout.id) {
+        this.activePresetId = workout.id;
+        localStorage.setItem(this.ACTIVE_ID_KEY, workout.id);
+      }
+    } catch (e) {
+      console.warn('Failed to save last workout', e);
+    }
   }
 
   deletePreset(id) {

@@ -41,14 +41,10 @@ class BoxingRoundTimer {
     this.warningFired = false;
     this.lastBeepSecond = null;
 
-    if (this.config.prepare > 0) {
-      this.phase = 'prepare';
-      this.phaseDuration = this.config.prepare;
-    } else {
-      this.phase = 'round';
-      this.phaseDuration = this.config.roundTime;
-    }
-    this.phaseRemaining = this.phaseDuration;
+    // In idle state, display the round duration (e.g. 03:00) so user sees active fight time
+    this.phase = 'round';
+    this.phaseDuration = this.config.roundTime;
+    this.phaseRemaining = this.config.roundTime;
 
     this.notifyTick();
   }
@@ -56,7 +52,19 @@ class BoxingRoundTimer {
   start() {
     if (this.status === 'running') return;
     if (this.status === 'finished' || this.status === 'idle') {
-      this.reset();
+      this.currentRound = 1;
+      this.warningFired = false;
+      this.lastBeepSecond = null;
+
+      if (this.config.prepare > 0) {
+        this.phase = 'prepare';
+        this.phaseDuration = this.config.prepare;
+        this.phaseRemaining = this.config.prepare;
+      } else {
+        this.phase = 'round';
+        this.phaseDuration = this.config.roundTime;
+        this.phaseRemaining = this.config.roundTime;
+      }
     }
 
     this.status = 'running';
