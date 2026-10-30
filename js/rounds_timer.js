@@ -68,7 +68,7 @@ class BoxingRoundTimer {
     }
 
     this.status = 'running';
-    this.lastTimestamp = performance.now();
+    this.lastTimestamp = Date.now();
 
     this.timerInterval = setInterval(() => {
       this.tick();
@@ -93,6 +93,12 @@ class BoxingRoundTimer {
       this.timerInterval = null;
     }
     this.notifyTick();
+  }
+
+  syncTime() {
+    if (this.status === 'running') {
+      this.tick();
+    }
   }
 
   togglePlay() {
@@ -147,34 +153,43 @@ class BoxingRoundTimer {
   tick() {
     if (this.status !== 'running') return;
 
-    const now = performance.now();
-    const delta = (now - this.lastTimestamp) / 1000;
+    const now = Date.now();
+    let delta = (now - this.lastTimestamp) / 1000;
     this.lastTimestamp = now;
 
-    this.phaseRemaining -= delta;
+    if (delta <= 0) return;
 
-    // 10s Warning Clapper during round
-    if (this.phase === 'round' && this.config.warningTime > 0) {
-      if (this.phaseRemaining <= this.config.warningTime && !this.warningFired) {
-        this.warningFired = true;
-        if (this.onWarning) {
-          this.onWarning(Math.round(this.phaseRemaining));
+    while (delta > 0 && this.status === 'running') {
+      if (this.phaseRemaining > delta) {
+        this.phaseRemaining -= delta;
+
+        // 10s Warning Clapper during round
+        if (this.phase === 'round' && this.config.warningTime > 0) {
+          if (this.phaseRemaining <= this.config.warningTime && !this.warningFired) {
+            this.warningFired = true;
+            if (this.onWarning) {
+              this.onWarning(Math.round(this.phaseRemaining));
+            }
+          }
+        }
+
+        // 3, 2, 1 Countdown Beeps in prepare or rest
+        const ceilSec = Math.ceil(this.phaseRemaining);
+        if ((this.phase === 'prepare' || this.phase === 'rest') && ceilSec <= 3 && ceilSec >= 1 && ceilSec !== this.lastBeepSecond) {
+          this.lastBeepSecond = ceilSec;
+          if (this.onCountdownBeep) {
+            this.onCountdownBeep(ceilSec, this.phase);
+          }
+        }
+        delta = 0;
+      } else {
+        delta -= this.phaseRemaining;
+        this.phaseRemaining = 0;
+        this.advance();
+        if (this.status === 'finished') {
+          break;
         }
       }
-    }
-
-    // 3, 2, 1 Countdown Beeps in prepare or rest
-    const ceilSec = Math.ceil(this.phaseRemaining);
-    if ((this.phase === 'prepare' || this.phase === 'rest') && ceilSec <= 3 && ceilSec >= 1 && ceilSec !== this.lastBeepSecond) {
-      this.lastBeepSecond = ceilSec;
-      if (this.onCountdownBeep) {
-        this.onCountdownBeep(ceilSec);
-      }
-    }
-
-    if (this.phaseRemaining <= 0) {
-      this.advance();
-      return;
     }
 
     this.notifyTick();

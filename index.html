@@ -549,16 +549,28 @@
         <!-- Volume Slider -->
         <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
           <div style="display:flex; justify-content:space-between; font-size:13px;">
-            <span style="color:var(--text-secondary); font-weight:700;">볼륨 조절</span>
-            <span id="volumePercentText" style="font-weight:800;">80%</span>
+            <span style="color:var(--text-secondary); font-weight:700;">사운드 볼륨 (음향 부스트)</span>
+            <span id="volumePercentText" style="font-weight:800; color:var(--color-work);">100%</span>
           </div>
-          <input type="range" class="range-slider" id="volumeSlider" min="0" max="100" value="80">
+          <input type="range" class="range-slider" id="volumeSlider" min="0" max="100" value="100">
+        </div>
+
+        <!-- Background Music Mixing Mode Switch -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:12px 14px; margin-top:8px;">
+          <div style="display:flex; flex-direction:column; gap:2px; padding-right:12px;">
+            <span style="font-size:13.5px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+              🎵 음악 앱과 동시 재생
+              <span style="font-size:10px; background:var(--color-work); color:#000; font-weight:800; padding:1px 5px; border-radius:4px;">권장</span>
+            </span>
+            <span style="font-size:11.5px; color:var(--text-secondary); line-height:1.4;">유튜브 뮤직, 스포티파이 등 음악이 끊기지 않고 카운트다운 소리와 함께 들립니다.</span>
+          </div>
+          <input type="checkbox" id="audioMixingToggle" checked style="width:22px; height:22px; accent-color:var(--color-work); cursor:pointer;">
         </div>
 
         <!-- Sound Test Buttons -->
-        <div style="display:flex; gap:8px; margin-top:4px;">
-          <button class="secondary-btn" id="testBellBtn" style="flex:1; font-size:12px; padding:10px;">🔔 복싱 벨 테스트</button>
-          <button class="secondary-btn" id="testBeepBtn" style="flex:1; font-size:12px; padding:10px;">⏱ 카운트다운 테스트</button>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="secondary-btn" id="testBeepBtn" style="flex:1.2; font-size:12px; padding:10px;">⏱ "셋, 둘, 하나, 시작!"</button>
+          <button class="secondary-btn" id="testBellBtn" style="flex:0.8; font-size:12px; padding:10px;">🔔 복싱 벨</button>
         </div>
 
         <!-- PWA / Offline Status Info -->

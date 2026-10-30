@@ -102,7 +102,7 @@ class WorkoutTimer {
     }
 
     this.status = 'running';
-    this.lastTimestamp = performance.now();
+    this.lastTimestamp = Date.now();
 
     this.timerInterval = setInterval(() => {
       this.tick();
@@ -128,13 +128,19 @@ class WorkoutTimer {
   resume() {
     if (this.status !== 'paused') return;
     this.status = 'running';
-    this.lastTimestamp = performance.now();
+    this.lastTimestamp = Date.now();
 
     this.timerInterval = setInterval(() => {
       this.tick();
     }, 50);
 
     this.notifyTick();
+  }
+
+  syncTime() {
+    if (this.status === 'running') {
+      this.tick();
+    }
   }
 
   togglePlay() {
@@ -150,30 +156,41 @@ class WorkoutTimer {
   tick() {
     if (this.status !== 'running') return;
 
-    const now = performance.now();
-    const delta = (now - this.lastTimestamp) / 1000;
+    const now = Date.now();
+    let delta = (now - this.lastTimestamp) / 1000;
     this.lastTimestamp = now;
 
-    this.phaseRemaining -= delta;
-    this.totalElapsed += delta;
+    if (delta <= 0) return;
 
-    if (this.totalElapsed > this.totalDuration) {
-      this.totalElapsed = this.totalDuration;
-    }
+    // Process all elapsed delta seamlessly (even if returning after 30+ seconds in background)
+    while (delta > 0 && this.status === 'running') {
+      if (this.phaseRemaining > delta) {
+        // Current phase continues
+        this.phaseRemaining -= delta;
+        this.totalElapsed = Math.min(this.totalDuration, this.totalElapsed + delta);
 
-    // Check countdown beeps (3, 2, 1)
-    const ceilSec = Math.ceil(this.phaseRemaining);
-    if (ceilSec <= 3 && ceilSec >= 1 && ceilSec !== this.lastBeepSecond) {
-      this.lastBeepSecond = ceilSec;
-      if (this.onCountdownBeep) {
-        this.onCountdownBeep(ceilSec);
+        // Check countdown beeps & voice (3, 2, 1)
+        const ceilSec = Math.ceil(this.phaseRemaining);
+        if (ceilSec <= 3 && ceilSec >= 1 && ceilSec !== this.lastBeepSecond) {
+          this.lastBeepSecond = ceilSec;
+          if (this.onCountdownBeep) {
+            this.onCountdownBeep(ceilSec, this.currentPhase);
+          }
+        }
+        delta = 0;
+      } else {
+        // Current phase completes in this delta slice
+        const consumed = this.phaseRemaining;
+        delta -= consumed;
+        this.totalElapsed = Math.min(this.totalDuration, this.totalElapsed + consumed);
+        this.phaseRemaining = 0;
+
+        // Transition to next phase
+        this.advanceToNextPhase();
+        if (this.status === 'finished') {
+          break;
+        }
       }
-    }
-
-    // Transition to next phase when current phase completes
-    if (this.phaseRemaining <= 0) {
-      this.advanceToNextPhase();
-      return;
     }
 
     this.notifyTick();

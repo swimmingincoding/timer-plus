@@ -108,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const volumePercentText = document.getElementById('volumePercentText');
   const testBellBtn = document.getElementById('testBellBtn');
   const testBeepBtn = document.getElementById('testBeepBtn');
+  const audioMixingToggle = document.getElementById('audioMixingToggle');
   const resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
   const openIosGuideBtn = document.getElementById('openIosGuideBtn');
 
@@ -194,12 +195,58 @@ document.addEventListener('DOMContentLoaded', () => {
     wakelockStatus.style.color = 'var(--text-muted)';
   }
 
+  // =========================================================================
+  // REAL-TIME WALL CLOCK SYNC & BACKGROUND WORKER TICKER
+  // =========================================================================
+  function syncAllTimers() {
+    if (timer.status === 'running') timer.syncTime();
+    if (roundsTimer.status === 'running') roundsTimer.syncTime();
+    if (stopwatch.status === 'running') stopwatch.syncTime();
+  }
+
+  // Background Web Worker: stays alive in background without main-thread tab throttling
+  let bgWorker = null;
+  try {
+    const workerBlob = new Blob([`
+      let tid = null;
+      self.onmessage = function(e) {
+        if (e.data === 'start') {
+          if (tid) clearInterval(tid);
+          tid = setInterval(() => { self.postMessage('tick'); }, 100);
+        } else if (e.data === 'stop') {
+          if (tid) clearInterval(tid);
+          tid = null;
+        }
+      };
+    `], { type: 'application/javascript' });
+    bgWorker = new Worker(URL.createObjectURL(workerBlob));
+    bgWorker.onmessage = () => {
+      syncAllTimers();
+    };
+  } catch (err) {
+    console.warn('Background worker fallback to wall-clock sync', err);
+  }
+
+  function updateBackgroundWorkerState() {
+    const isAnyRunning = timer.status === 'running' || roundsTimer.status === 'running' || stopwatch.status === 'running';
+    if (bgWorker) {
+      bgWorker.postMessage(isAnyRunning ? 'start' : 'stop');
+    }
+  }
+
+  // Immediate catch-up when tab wakes up, app re-opens, or window regains focus
   document.addEventListener('visibilitychange', () => {
     const isAnyRunning = timer.status === 'running' || roundsTimer.status === 'running' || stopwatch.status === 'running';
-    if (document.visibilityState === 'visible' && isAnyRunning) {
-      requestWakeLock();
+    if (document.visibilityState === 'visible') {
+      syncAllTimers();
+      if (isAnyRunning) {
+        requestWakeLock();
+      }
     }
   });
+
+  window.addEventListener('focus', () => syncAllTimers());
+  window.addEventListener('pageshow', () => syncAllTimers());
 
   // Haptic feedback
   function triggerHaptic(pattern = [60]) {
@@ -234,13 +281,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
-  // BLUETOOTH / EARBUDS MEDIA SESSION & SILENT AUDIO KEEPALIVE
+  // BLUETOOTH / EARBUDS MEDIA SESSION & AUDIO MIXING COEXISTENCE
   // =========================================================================
-  // Standard 1-second silent WAV loop to keep media session active on iOS/Android
+  // Silent audio is ONLY used when audio mixing mode is OFF (to prevent hijacking YouTube Music / Spotify)
   const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
   silentAudio.loop = true;
 
   function updateMediaSessionMetadata({ title, artist, album, state = 'playing' }) {
+    // If audioMixingMode is active, keep background music playing and never hijack audio focus!
+    if (sound.audioMixingMode) {
+      if (silentAudio && !silentAudio.paused) {
+        silentAudio.pause();
+      }
+      return;
+    }
+
     if ('mediaSession' in navigator) {
       try {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -436,12 +491,13 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   timer.onCountdownBeep = (sec) => {
-    sound.playCountdownBeep(sec);
+    sound.playCountdownBeep(sec, timer.currentPhase);
     triggerHaptic([40]);
   };
 
   timer.onComplete = () => {
     releaseWakeLock();
+    updateBackgroundWorkerState();
     sound.playComplete();
     triggerHaptic([200, 100, 200, 100, 400]);
 
@@ -469,6 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   playBtn.addEventListener('click', () => {
+    sound.initContext();
     sound.playTap();
     if (timer.status === 'running') {
       timer.pause();
@@ -478,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
       timer.start();
       requestWakeLock();
     }
+    updateBackgroundWorkerState();
   });
 
   nextBtn.addEventListener('click', () => {
@@ -494,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playTap();
     timer.reset();
     releaseWakeLock();
+    updateBackgroundWorkerState();
     showToast('인터벌 타이머가 초기화되었습니다.');
   });
 
@@ -572,7 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (phase === 'round') {
-      sound.playBoxingBell();
+      sound.playWorkStart();
       triggerHaptic([150, 80, 150]);
     } else if (phase === 'rest') {
       sound.playRoundEndBell();
@@ -587,12 +646,13 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   roundsTimer.onCountdownBeep = (sec) => {
-    sound.playCountdownBeep(sec);
+    sound.playCountdownBeep(sec, roundsTimer.phase);
     triggerHaptic([40]);
   };
 
   roundsTimer.onComplete = () => {
     releaseWakeLock();
+    updateBackgroundWorkerState();
     sound.playComplete();
     triggerHaptic([200, 100, 200, 100, 400]);
     if (currentActiveTab === 'rounds') {
@@ -602,6 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   roundsPlayBtn.addEventListener('click', () => {
+    sound.initContext();
     sound.playTap();
     if (roundsTimer.status === 'running') {
       roundsTimer.pause();
@@ -611,6 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
       roundsTimer.start();
       requestWakeLock();
     }
+    updateBackgroundWorkerState();
   });
 
   roundsPrevBtn.addEventListener('click', () => {
@@ -628,6 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
     roundsTimer.reset();
     roundsWarningBadge.style.display = 'none';
     releaseWakeLock();
+    updateBackgroundWorkerState();
     showToast('라운드 타이머가 초기화되었습니다.');
   });
 
@@ -791,6 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   stopwatchStartStopBtn.addEventListener('click', () => {
+    sound.initContext();
     sound.playTap();
     if (stopwatch.status === 'running') {
       stopwatch.pause();
@@ -799,6 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
       stopwatch.start();
       requestWakeLock();
     }
+    updateBackgroundWorkerState();
   });
 
   stopwatchLapResetBtn.addEventListener('click', () => {
@@ -808,6 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
       triggerHaptic([40]);
     } else {
       stopwatch.reset();
+      updateBackgroundWorkerState();
       showToast('스톱워치가 초기화되었습니다.');
     }
   });
@@ -1032,6 +1098,9 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playTap();
     volumeSlider.value = Math.round(sound.volume * 100);
     volumePercentText.textContent = `${Math.round(sound.volume * 100)}%`;
+    if (audioMixingToggle) {
+      audioMixingToggle.checked = sound.audioMixingMode;
+    }
 
     document.querySelectorAll('.seg-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.mode === sound.soundMode);
@@ -1067,14 +1136,32 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.saveSettings();
   });
 
+  if (audioMixingToggle) {
+    audioMixingToggle.addEventListener('change', () => {
+      sound.audioMixingMode = audioMixingToggle.checked;
+      sound.saveSettings();
+      showToast(sound.audioMixingMode ? '🎵 음악 앱 동시 재생 모드 ON' : '배경 오디오 우선 모드');
+    });
+  }
+
   testBellBtn.addEventListener('click', () => {
     sound.playBoxingBell();
   });
 
+  let testCountdownTimeout = null;
   testBeepBtn.addEventListener('click', () => {
-    sound.playCountdownBeep(3);
-    setTimeout(() => sound.playCountdownBeep(2), 500);
-    setTimeout(() => sound.playCountdownBeep(1), 1000);
+    sound.initContext();
+    if (testCountdownTimeout) clearTimeout(testCountdownTimeout);
+    sound.playCountdownBeep(3, 'work');
+    testCountdownTimeout = setTimeout(() => {
+      sound.playCountdownBeep(2, 'work');
+      testCountdownTimeout = setTimeout(() => {
+        sound.playCountdownBeep(1, 'work');
+        testCountdownTimeout = setTimeout(() => {
+          sound.playWorkStart();
+        }, 1000);
+      }, 1000);
+    }, 1000);
   });
 
   resetDefaultsBtn.addEventListener('click', () => {

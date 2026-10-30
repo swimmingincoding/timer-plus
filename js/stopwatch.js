@@ -22,7 +22,7 @@ class StopwatchEngine {
   start() {
     if (this.status === 'running') return;
 
-    const now = performance.now();
+    const now = Date.now();
     if (this.status === 'stopped') {
       this.startTime = now;
       this.currentLapStart = now;
@@ -48,12 +48,18 @@ class StopwatchEngine {
   pause() {
     if (this.status !== 'running') return;
     this.status = 'paused';
-    this.pausedAt = performance.now();
+    this.pausedAt = Date.now();
     if (this.timerId) {
       clearInterval(this.timerId);
       this.timerId = null;
     }
     this.tick();
+  }
+
+  syncTime() {
+    if (this.status === 'running') {
+      this.tick();
+    }
   }
 
   reset() {
@@ -77,7 +83,7 @@ class StopwatchEngine {
   recordLap() {
     if (this.status !== 'running') return null;
 
-    const now = performance.now();
+    const now = Date.now();
     const lapTime = now - this.currentLapStart;
     const totalTime = now - this.startTime;
 
@@ -127,7 +133,7 @@ class StopwatchEngine {
 
   tick() {
     if (this.status === 'running') {
-      const now = performance.now();
+      const now = Date.now();
       this.totalElapsed = now - this.startTime;
       this.currentLapElapsed = now - this.currentLapStart;
     }
