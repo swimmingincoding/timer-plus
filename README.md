@@ -2,7 +2,7 @@
 
 아이폰(iOS)과 안드로이드에서 널리 사용되는 고성능 운동 타이머 어플리케이션 **"TimerPlus"**의 핵심 기능과 UI/UX를 모바일 웹 및 **PWA(Progressive Web App)** 형태로 구현한 프로젝트입니다.
 
-네트워크 연결이 없는 헬스장, 지하, 비행기 모드에서도 **100% 오프라인**으로 작동하며, **Netlify**를 통해 1분 만에 무료로 배포하고 스마트폰 홈 화면에 추가하여 네이티브 앱처럼 사용할 수 있습니다.
+네트워크 연결이 없는 헬스장, 지하, 비행기 모드에서도 **100% 오프라인**으로 작동하며, **GitHub Pages**를 통해 완전 무료로 자동 배포되고 스마트폰 홈 화면에 추가하여 네이티브 앱처럼 사용할 수 있습니다.
 
 ---
 
@@ -48,47 +48,25 @@
 
 ---
 
-## 🚀 Netlify에 무료 배포하는 방법
+## 🚀 GitHub Pages 배포 가이드 (완전 무료 & 무제한 트래픽)
 
-Netlify의 무료 플랜(Free Tier)으로 누구나 평생 무료 호스팅 및 HTTPS 도메인을 받을 수 있습니다.
+GitHub Actions를 통해 코드를 `main` 브랜치에 Push하기만 하면 자동으로 빌드 및 배포가 완료됩니다.
 
-### 방법 1: Netlify Drop (가장 쉽고 빠른 방법 - 추천 ⭐️)
+### 1. GitHub Pages 설정 확인
+1. 본 저장소의 **Settings** > **Pages**로 이동합니다.
+2. **Build and deployment** > **Source** 항목에서 **"GitHub Actions"**를 선택합니다.
 
-1. [Netlify 공식 사이트](https://www.netlify.com/)에 접속하여 무료 계정으로 로그인합니다.
-2. 상단 메뉴의 **"Sites"** 탭으로 이동합니다.
-3. 페이지 하단의 **"Want to deploy a new site without connecting to Git? Drag and drop your site output folder here"** 영역을 찾습니다.
-4. 본 프로젝트 폴더(`timer_plus` 전체 폴더)를 브라우저 드롭 영역으로 그대로 드래그 앤 드롭합니다.
-5. 10초 이내에 무료 HTTPS 주소(예: `https://sparkling-timerplus-12345.netlify.app`)가 생성되며 배포가 완료됩니다!
-6. *선택 사항*: `Site configuration` > `Change site name`에서 원하는 이름(예: `my-timerplus.netlify.app`)으로 주소를 변경할 수 있습니다.
-
----
-
-### 방법 2: GitHub 연동 자동 배포 (코드 수정 시 자동 업데이트)
-
-1. 본 폴더의 파일들을 본인의 GitHub 저장소에 Push합니다.
+### 2. 자동 배포 실행
+1. 코드를 커밋하고 GitHub `main` 브랜치에 Push합니다:
    ```bash
-   git init
    git add .
-   git commit -m "feat: TimerPlus PWA init"
-   git remote add origin <본인-깃허브-레포-URL>
-   git push -u origin main
+   git commit -m "feat: migrate deployment to GitHub Pages"
+   git push origin main
    ```
-2. Netlify 대시보드에서 **"Add new site"** > **"Import an existing project"** 클릭
-3. **GitHub**를 선택하고 해당 저장소를 지정합니다.
-4. 빌드 설정은 기본값 그대로 둡니다 (정적 사이트이므로 Build command는 비워두고 Publish directory는 `.` 또는 비움).
-5. **"Deploy site"**를 누르면 자동으로 배포됩니다.
+2. 저장소 상단의 **Actions** 탭에서 `Deploy to GitHub Pages` 워크플로우가 자동으로 실행되는 것을 확인할 수 있습니다.
+3. 배포가 완료되면 `https://<깃허브-아이디>.github.io/<저장소-이름>/` 주소로 즉시 접속 가능합니다.
 
----
-
-### 방법 3: Netlify CLI로 터미널에서 즉시 배포
-
-```bash
-# Netlify CLI로 로그인
-npx netlify login
-
-# 프로덕션 배포 실행
-npx netlify deploy --prod --dir=.
-```
+> 💡 **Netlify 배포 중단 팁**: Netlify 대시보드에서 해당 사이트의 `Site configuration` > `Build & deploy` > `Stop builds`를 설정하면 불필요한 Netlify 빌드 토큰 소모를 완전히 방지할 수 있습니다.
 
 ---
 
