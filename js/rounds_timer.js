@@ -173,9 +173,9 @@ class BoxingRoundTimer {
           }
         }
 
-        // 3, 2, 1 Countdown Beeps in prepare or rest
+        // 3, 2, 1 Countdown Beeps & Voice in all active phases (prepare, round, rest)
         const ceilSec = Math.ceil(this.phaseRemaining);
-        if ((this.phase === 'prepare' || this.phase === 'rest') && ceilSec <= 3 && ceilSec >= 1 && ceilSec !== this.lastBeepSecond) {
+        if (ceilSec <= 3 && ceilSec >= 1 && ceilSec !== this.lastBeepSecond) {
           this.lastBeepSecond = ceilSec;
           if (this.onCountdownBeep) {
             this.onCountdownBeep(ceilSec, this.phase);

@@ -234,10 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Immediate catch-up when tab wakes up, app re-opens, or window regains focus
+  // Immediate catch-up & audio engine self-healing when tab wakes up, app re-opens, or window regains focus
   document.addEventListener('visibilitychange', () => {
     const isAnyRunning = timer.status === 'running' || roundsTimer.status === 'running' || stopwatch.status === 'running';
     if (document.visibilityState === 'visible') {
+      sound.resumeContext();
       syncAllTimers();
       if (isAnyRunning) {
         requestWakeLock();
@@ -245,8 +246,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  window.addEventListener('focus', () => syncAllTimers());
-  window.addEventListener('pageshow', () => syncAllTimers());
+  window.addEventListener('focus', () => {
+    sound.resumeContext();
+    syncAllTimers();
+  });
+  window.addEventListener('pageshow', () => {
+    sound.resumeContext();
+    syncAllTimers();
+  });
+  window.addEventListener('touchstart', () => sound.resumeContext(), { passive: true });
+  window.addEventListener('pointerdown', () => sound.resumeContext(), { passive: true });
 
   // Haptic feedback
   function triggerHaptic(pattern = [60]) {
