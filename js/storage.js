@@ -14,20 +14,22 @@ const DEFAULT_PRESETS = [
     sets: 1,
     setRest: 60,
     cooldown: 0,
+    exercises: [],
     isBuiltin: true
   },
   {
-    id: 'boxing-3min',
-    name: '복싱 3분 5라운드 (Boxing)',
-    tag: '복싱/격투기',
-    color: '#FF9100',
+    id: 'home-circuit-fullbody',
+    name: '홈트 전신 서킷 4종 (40s/20s)',
+    tag: '홈트 서킷',
+    color: '#00E5FF',
     prepare: 10,
-    work: 180,
-    rest: 60,
-    rounds: 5,
-    sets: 1,
+    work: 40,
+    rest: 20,
+    rounds: 4,
+    sets: 3,
     setRest: 60,
-    cooldown: 0,
+    cooldown: 30,
+    exercises: ['스쿼트', '푸쉬업', '런지', '플랭크'],
     isBuiltin: true
   },
   {
@@ -42,6 +44,7 @@ const DEFAULT_PRESETS = [
     sets: 3,
     setRest: 60,
     cooldown: 30,
+    exercises: ['버피 테스트', '마운틴 클라이머', '점프 스쿼트', '하이 니즈'],
     isBuiltin: true
   },
   {
@@ -56,6 +59,22 @@ const DEFAULT_PRESETS = [
     sets: 1,
     setRest: 0,
     cooldown: 0,
+    exercises: [],
+    isBuiltin: true
+  },
+  {
+    id: 'boxing-3min',
+    name: '복싱 3분 5라운드 (Boxing)',
+    tag: '복싱/격투기',
+    color: '#FF9100',
+    prepare: 10,
+    work: 180,
+    rest: 60,
+    rounds: 5,
+    sets: 1,
+    setRest: 60,
+    cooldown: 0,
+    exercises: [],
     isBuiltin: true
   },
   {
@@ -70,6 +89,7 @@ const DEFAULT_PRESETS = [
     sets: 1,
     setRest: 0,
     cooldown: 0,
+    exercises: [],
     isBuiltin: true
   }
 ];
@@ -90,19 +110,25 @@ class StorageManager {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         this.presets = JSON.parse(stored);
+        // Ensure new built-in home circuit preset is available for existing users
+        if (!this.presets.some(p => p.id === 'home-circuit-fullbody')) {
+          const homePreset = DEFAULT_PRESETS.find(p => p.id === 'home-circuit-fullbody');
+          if (homePreset) {
+            this.presets.splice(1, 0, { ...homePreset });
+            this.savePresets();
+          }
+        }
       } else {
-        this.presets = [...DEFAULT_PRESETS];
+        this.presets = DEFAULT_PRESETS.map(p => ({ ...p }));
         this.savePresets();
       }
 
-      // 1. Check if an explicit last configured/used workout is saved
       const lastWorkoutRaw = localStorage.getItem(this.LAST_WORKOUT_KEY);
       if (lastWorkoutRaw) {
         try {
           const lastWorkout = JSON.parse(lastWorkoutRaw);
           if (lastWorkout && lastWorkout.id) {
             this.activePresetId = lastWorkout.id;
-            // Ensure presets list has the latest version of this workout
             const existingIdx = this.presets.findIndex(p => p.id === lastWorkout.id);
             if (existingIdx !== -1) {
               this.presets[existingIdx] = { ...this.presets[existingIdx], ...lastWorkout };
@@ -125,7 +151,7 @@ class StorageManager {
       }
     } catch (e) {
       console.warn('Storage init failed, using defaults', e);
-      this.presets = [...DEFAULT_PRESETS];
+      this.presets = DEFAULT_PRESETS.map(p => ({ ...p }));
       this.activePresetId = 'tabata-classic';
     }
   }
@@ -143,11 +169,9 @@ class StorageManager {
   }
 
   getActivePreset() {
-    // Check presets by activePresetId
     const found = this.presets.find(p => p.id === this.activePresetId);
     if (found) return found;
 
-    // Fallback to last workout or first preset
     try {
       const saved = localStorage.getItem(this.LAST_WORKOUT_KEY);
       if (saved) return JSON.parse(saved);
@@ -171,7 +195,6 @@ class StorageManager {
     let targetPreset = null;
 
     if (presetData.id) {
-      // Update existing
       const index = this.presets.findIndex(p => p.id === presetData.id);
       if (index !== -1) {
         this.presets[index] = { ...this.presets[index], ...presetData };
@@ -180,7 +203,6 @@ class StorageManager {
     }
 
     if (!targetPreset) {
-      // Create new
       targetPreset = {
         ...presetData,
         id: 'custom-' + Date.now(),
@@ -229,6 +251,7 @@ class StorageManager {
 
     const copy = {
       ...original,
+      exercises: Array.isArray(original.exercises) ? [...original.exercises] : [],
       id: 'custom-' + Date.now(),
       name: `${original.name} (복사본)`,
       tag: '커스텀',
@@ -239,14 +262,16 @@ class StorageManager {
     this.activePresetId = copy.id;
     this.savePresets();
     localStorage.setItem(this.ACTIVE_ID_KEY, copy.id);
+    localStorage.setItem(this.LAST_WORKOUT_KEY, JSON.stringify(copy));
     return copy;
   }
 
   resetToDefaults() {
-    this.presets = [...DEFAULT_PRESETS];
+    this.presets = DEFAULT_PRESETS.map(p => ({ ...p, exercises: [...(p.exercises || [])] }));
     this.activePresetId = this.presets[0].id;
     this.savePresets();
     localStorage.setItem(this.ACTIVE_ID_KEY, this.activePresetId);
+    localStorage.setItem(this.LAST_WORKOUT_KEY, JSON.stringify(this.presets[0]));
     return this.presets;
   }
 }

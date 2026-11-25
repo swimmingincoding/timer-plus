@@ -1,30 +1,35 @@
 /**
  * TimerPlus Application Controller
- * Orchestrates Interval Timer, Boxing Round Timer, Stopwatch,
- * Audio Engine, Storage, Screen WakeLock, and PWA Installation.
+ * Orchestrates Interval/Circuit Timer, Weight Set & Rest Timer, Boxing Round Timer,
+ * Stopwatch, Audio Engine (with 1s Tick-Tock), Storage, WakeLock, and Landscape/PWA UX.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Core Engines
   const timer = new WorkoutTimer();
+  const weightTimer = new WeightSetTimer();
   const roundsTimer = new BoxingRoundTimer();
   const stopwatch = new StopwatchEngine();
   const storage = window.storageManager;
   const sound = window.soundEngine;
 
   // 2. Navigation Tabs & Views
-  let currentActiveTab = 'interval'; // 'interval', 'rounds', 'stopwatch'
+  let currentActiveTab = 'interval'; // 'interval', 'weight', 'rounds', 'stopwatch'
   const tabInterval = document.getElementById('tabInterval');
+  const tabWeight = document.getElementById('tabWeight');
   const tabRounds = document.getElementById('tabRounds');
   const tabStopwatch = document.getElementById('tabStopwatch');
 
   const viewInterval = document.getElementById('viewInterval');
+  const viewWeight = document.getElementById('viewWeight');
   const viewRounds = document.getElementById('viewRounds');
   const viewStopwatch = document.getElementById('viewStopwatch');
 
   // Header Elements
   const headerRoutineName = document.getElementById('headerRoutineName');
   const openPresetsBtn = document.getElementById('openPresetsBtn');
+  const headerWeightBtn = document.getElementById('headerWeightBtn');
+  const headerWeightName = document.getElementById('headerWeightName');
   const headerRoundsConfigBtn = document.getElementById('headerRoundsConfigBtn');
   const headerRoundsPresetName = document.getElementById('headerRoundsPresetName');
   const headerStopwatchTitle = document.getElementById('headerStopwatchTitle');
@@ -40,9 +45,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const roundDisplay = document.getElementById('roundDisplay');
   const setDisplay = document.getElementById('setDisplay');
   const setDisplayWrapper = document.getElementById('setDisplayWrapper');
+  const intervalExerciseBanner = document.getElementById('intervalExerciseBanner');
+  const intervalExerciseName = document.getElementById('intervalExerciseName');
   const dialProgressRing = document.getElementById('dialProgressRing');
   const mainTimeDisplay = document.getElementById('mainTimeDisplay');
   const totalRemainingDisplay = document.getElementById('totalRemainingDisplay');
+  const intervalQuickAdjustRow = document.getElementById('intervalQuickAdjustRow');
   const nextUpText = document.getElementById('nextUpText');
   const overallPercentText = document.getElementById('overallPercentText');
   const overallProgressBar = document.getElementById('overallProgressBar');
@@ -56,6 +64,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const editCurrentRoutineBtn = document.getElementById('editCurrentRoutineBtn');
   const wakelockStatus = document.getElementById('wakelockStatus');
   const wakelockText = document.getElementById('wakelockText');
+
+  // Weight View Elements
+  const weightPhasePill = document.getElementById('weightPhasePill');
+  const weightSetsMinusBtn = document.getElementById('weightSetsMinusBtn');
+  const weightSetsPlusBtn = document.getElementById('weightSetsPlusBtn');
+  const weightSetDisplay = document.getElementById('weightSetDisplay');
+  const weightSetDots = document.getElementById('weightSetDots');
+  const weightDialProgressRing = document.getElementById('weightDialProgressRing');
+  const weightMainTimeDisplay = document.getElementById('weightMainTimeDisplay');
+  const weightSubHint = document.getElementById('weightSubHint');
+  const weightPresetChipsRow = document.getElementById('weightPresetChipsRow');
+  const weightActiveAdjustRow = document.getElementById('weightActiveAdjustRow');
+  const weightSubBtn = document.getElementById('weightSubBtn');
+  const weightSubBtnLabel = document.getElementById('weightSubBtnLabel');
+  const weightPrimaryBtn = document.getElementById('weightPrimaryBtn');
+  const weightPrimaryBtnLabel = document.getElementById('weightPrimaryBtnLabel');
+  const weightResetBtn = document.getElementById('weightResetBtn');
+  const weightSessionSummary = document.getElementById('weightSessionSummary');
+  const weightEditLabelBtn = document.getElementById('weightEditLabelBtn');
 
   // Rounds View Elements
   const roundsPhasePill = document.getElementById('roundsPhasePill');
@@ -94,6 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const editorModalTitle = document.getElementById('editorModalTitle');
   const closeEditorBtn = document.getElementById('closeEditorBtn');
   const editNameInput = document.getElementById('editNameInput');
+  const circuitExercisesToggleBtn = document.getElementById('circuitExercisesToggleBtn');
+  const circuitExercisesPanel = document.getElementById('circuitExercisesPanel');
+  const circuitExercisesInputs = document.getElementById('circuitExercisesInputs');
+  const clearCircuitExercisesBtn = document.getElementById('clearCircuitExercisesBtn');
   const saveRoutineBtn = document.getElementById('saveRoutineBtn');
   const deleteRoutineBtn = document.getElementById('deleteRoutineBtn');
 
@@ -102,13 +133,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveRoundsConfigBtn = document.getElementById('saveRoundsConfigBtn');
   const rcWarningToggle = document.getElementById('rcWarningToggle');
 
+  const weightLabelModal = document.getElementById('weightLabelModal');
+  const closeWeightLabelBtn = document.getElementById('closeWeightLabelBtn');
+  const weightLabelInput = document.getElementById('weightLabelInput');
+  const saveWeightLabelBtn = document.getElementById('saveWeightLabelBtn');
+
   const settingsModal = document.getElementById('settingsModal');
   const closeSettingsModalBtn = document.getElementById('closeSettingsModalBtn');
   const volumeSlider = document.getElementById('volumeSlider');
   const volumePercentText = document.getElementById('volumePercentText');
+  const tickSoundToggle = document.getElementById('tickSoundToggle');
+  const halfwayAlertToggle = document.getElementById('halfwayAlertToggle');
+  const audioMixingToggle = document.getElementById('audioMixingToggle');
+  const testTickBtn = document.getElementById('testTickBtn');
   const testBellBtn = document.getElementById('testBellBtn');
   const testBeepBtn = document.getElementById('testBeepBtn');
-  const audioMixingToggle = document.getElementById('audioMixingToggle');
   const resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
   const openIosGuideBtn = document.getElementById('openIosGuideBtn');
 
@@ -116,17 +155,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeIosGuideBtn = document.getElementById('closeIosGuideBtn');
   const confirmIosGuideBtn = document.getElementById('confirmIosGuideBtn');
 
-
-
   // Constants
   const DIAL_CIRCUMFERENCE = 2 * Math.PI * 115; // 722.56
   dialProgressRing.style.strokeDasharray = `${DIAL_CIRCUMFERENCE}`;
+  weightDialProgressRing.style.strokeDasharray = `${DIAL_CIRCUMFERENCE}`;
   roundsDialProgressRing.style.strokeDasharray = `${DIAL_CIRCUMFERENCE}`;
 
   // State Variables
   let wakeLockSentinel = null;
-  let deferredInstallPrompt = null;
   let editingPreset = null;
+  let circuitPanelExpanded = false;
   let currentEditorConfig = {
     work: 20,
     rest: 10,
@@ -134,8 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
     sets: 1,
     setRest: 60,
     prepare: 10,
-    cooldown: 0
+    cooldown: 0,
+    exercises: []
   };
+
+  // Safe 2-tap Reset Guard State
+  const resetGuardTimers = {};
 
   // Rounds Config State
   let currentRoundsConfig = {
@@ -165,17 +207,28 @@ document.addEventListener('DOMContentLoaded', () => {
     finished: { label: '운동 완료! 🎉', color: '#FFD600', glow: 'rgba(255, 214, 0, 0.45)' }
   };
 
+  function isAnyTimerRunning() {
+    return (
+      timer.status === 'running' ||
+      weightTimer.status === 'running' ||
+      roundsTimer.status === 'running' ||
+      stopwatch.status === 'running'
+    );
+  }
+
   // =========================================================================
   // Screen Wake Lock API
   // =========================================================================
   async function requestWakeLock() {
     if ('wakeLock' in navigator) {
       try {
+        if (wakeLockSentinel) return;
         wakeLockSentinel = await navigator.wakeLock.request('screen');
         wakelockText.textContent = '화면 유지 ON';
         wakelockStatus.style.color = 'var(--color-work)';
         wakeLockSentinel.addEventListener('release', () => {
-          if (timer.status !== 'running' && roundsTimer.status !== 'running' && stopwatch.status !== 'running') {
+          wakeLockSentinel = null;
+          if (!isAnyTimerRunning()) {
             wakelockText.textContent = '화면 유지 대기';
             wakelockStatus.style.color = 'var(--text-muted)';
           }
@@ -186,7 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function releaseWakeLock() {
+  function releaseWakeLockIfIdle() {
+    if (isAnyTimerRunning()) return;
     if (wakeLockSentinel) {
       wakeLockSentinel.release().catch(() => {});
       wakeLockSentinel = null;
@@ -200,11 +254,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   function syncAllTimers() {
     if (timer.status === 'running') timer.syncTime();
+    if (weightTimer.status === 'running') weightTimer.syncTime();
     if (roundsTimer.status === 'running') roundsTimer.syncTime();
     if (stopwatch.status === 'running') stopwatch.syncTime();
   }
 
-  // Background Web Worker: stays alive in background without main-thread tab throttling
   let bgWorker = null;
   try {
     const workerBlob = new Blob([`
@@ -228,34 +282,29 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateBackgroundWorkerState() {
-    const isAnyRunning = timer.status === 'running' || roundsTimer.status === 'running' || stopwatch.status === 'running';
     if (bgWorker) {
-      bgWorker.postMessage(isAnyRunning ? 'start' : 'stop');
+      bgWorker.postMessage(isAnyTimerRunning() ? 'start' : 'stop');
     }
   }
 
-  // Immediate catch-up & audio engine self-healing when tab wakes up, app re-opens, or window regains focus
   document.addEventListener('visibilitychange', () => {
-    const isAnyRunning = timer.status === 'running' || roundsTimer.status === 'running' || stopwatch.status === 'running';
     if (document.visibilityState === 'visible') {
-      sound.resumeContext();
+      sound.resumeContext(true);
       syncAllTimers();
-      if (isAnyRunning) {
+      if (isAnyTimerRunning()) {
         requestWakeLock();
       }
     }
   });
 
   window.addEventListener('focus', () => {
-    sound.resumeContext();
+    sound.resumeContext(true);
     syncAllTimers();
   });
   window.addEventListener('pageshow', () => {
-    sound.resumeContext();
+    sound.resumeContext(true);
     syncAllTimers();
   });
-  window.addEventListener('touchstart', () => sound.resumeContext(), { passive: true });
-  window.addEventListener('pointerdown', () => sound.resumeContext(), { passive: true });
 
   // Haptic feedback
   function triggerHaptic(pattern = [60]) {
@@ -281,23 +330,99 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(centis).padStart(2, '0')}`;
   }
 
+  let toastTimeout = null;
   function showToast(text) {
     toastMsg.textContent = text;
     toastMsg.classList.add('show');
-    setTimeout(() => {
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
       toastMsg.classList.remove('show');
     }, 2400);
+  }
+
+  /**
+   * Prevents accidental 1-tap resets during a sweaty workout
+   */
+  function handleProtectedReset(key, needsProtection, doResetFn) {
+    if (!needsProtection || resetGuardTimers[key]) {
+      if (resetGuardTimers[key]) {
+        clearTimeout(resetGuardTimers[key]);
+        delete resetGuardTimers[key];
+      }
+      doResetFn();
+      return;
+    }
+    resetGuardTimers[key] = setTimeout(() => {
+      delete resetGuardTimers[key];
+    }, 2600);
+    triggerHaptic([40]);
+    showToast('⚠️ 운동 중입니다. 한 번 더 누르면 초기화됩니다.');
+  }
+
+  /**
+   * Binds click + hold-to-repeat acceleration on stepper buttons
+   */
+  function bindHoldStepper(btn, stepCallback) {
+    let holdDelayTimer = null;
+    let repeatTimer = null;
+    let holdStart = 0;
+    let handledByPointer = false;
+
+    const clearHold = () => {
+      if (holdDelayTimer) {
+        clearTimeout(holdDelayTimer);
+        holdDelayTimer = null;
+      }
+      if (repeatTimer) {
+        clearTimeout(repeatTimer);
+        repeatTimer = null;
+      }
+    };
+
+    const scheduleRepeat = () => {
+      const heldMs = Date.now() - holdStart;
+      const interval = heldMs > 1600 ? 45 : 95;
+      repeatTimer = setTimeout(() => {
+        stepCallback(true);
+        scheduleRepeat();
+      }, interval);
+    };
+
+    btn.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      handledByPointer = true;
+      clearHold();
+      holdStart = Date.now();
+      sound.playTap();
+      stepCallback(false);
+      holdDelayTimer = setTimeout(() => {
+        scheduleRepeat();
+      }, 360);
+    });
+
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+      btn.addEventListener(evt, clearHold);
+    });
+
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    btn.addEventListener('click', () => {
+      if (handledByPointer) {
+        handledByPointer = false;
+        return;
+      }
+      sound.playTap();
+      stepCallback(false);
+    });
   }
 
   // =========================================================================
   // BLUETOOTH / EARBUDS MEDIA SESSION & AUDIO MIXING COEXISTENCE
   // =========================================================================
-  // Silent audio is ONLY used when audio mixing mode is OFF (to prevent hijacking YouTube Music / Spotify)
   const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
   silentAudio.loop = true;
 
   function updateMediaSessionMetadata({ title, artist, album, state = 'playing' }) {
-    // If audioMixingMode is active, keep background music playing and never hijack audio focus!
     if (sound.audioMixingMode) {
       if (silentAudio && !silentAudio.paused) {
         silentAudio.pause();
@@ -317,9 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ]
         });
         navigator.mediaSession.playbackState = state;
-      } catch (e) {
-        // Ignore media session errors
-      }
+      } catch (e) {}
     }
 
     if (state === 'playing') {
@@ -329,10 +452,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Central Control Actions (Used by Media Session and Keyboard Shortcuts)
   function toggleCurrentTimer() {
     if (currentActiveTab === 'interval') {
       playBtn.click();
+    } else if (currentActiveTab === 'weight') {
+      if (weightTimer.phase === 'rest') {
+        weightSubBtn.click();
+      } else {
+        weightPrimaryBtn.click();
+      }
     } else if (currentActiveTab === 'rounds') {
       roundsPlayBtn.click();
     } else if (currentActiveTab === 'stopwatch') {
@@ -343,6 +471,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function skipCurrentTimerNext() {
     if (currentActiveTab === 'interval') {
       nextBtn.click();
+    } else if (currentActiveTab === 'weight') {
+      weightPrimaryBtn.click();
     } else if (currentActiveTab === 'rounds') {
       roundsNextBtn.click();
     } else if (currentActiveTab === 'stopwatch') {
@@ -358,79 +488,84 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Bind Media Session hardware buttons (AirPods / Earbuds click)
   if ('mediaSession' in navigator) {
     try {
       navigator.mediaSession.setActionHandler('play', () => toggleCurrentTimer());
       navigator.mediaSession.setActionHandler('pause', () => toggleCurrentTimer());
       navigator.mediaSession.setActionHandler('nexttrack', () => skipCurrentTimerNext());
       navigator.mediaSession.setActionHandler('previoustrack', () => skipCurrentTimerPrev());
-    } catch (e) {
-      console.warn('MediaSession handler registration failed', e);
-    }
+    } catch (e) {}
   }
 
   // =========================================================================
   // TAB NAVIGATION CONTROLLER
   // =========================================================================
+  function syncWeightTheme(phase) {
+    if (phase === 'rest') {
+      document.documentElement.style.setProperty('--active-phase-color', '#FF9100');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(255, 145, 0, 0.35)');
+    } else if (phase === 'lifting') {
+      document.documentElement.style.setProperty('--active-phase-color', '#00C2FF');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(0, 194, 255, 0.35)');
+    } else if (phase === 'finished') {
+      document.documentElement.style.setProperty('--active-phase-color', '#FFD600');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(255, 214, 0, 0.45)');
+    } else {
+      document.documentElement.style.setProperty('--active-phase-color', '#00E676');
+      document.documentElement.style.setProperty('--active-phase-glow', 'rgba(0, 230, 118, 0.4)');
+    }
+  }
+
   function switchTab(tabName) {
+    const validTabs = ['interval', 'weight', 'rounds', 'stopwatch'];
+    if (!validTabs.includes(tabName)) tabName = 'interval';
+
     currentActiveTab = tabName;
     try {
       localStorage.setItem('timerplus_last_active_tab', tabName);
     } catch (e) {}
 
-    // Update bottom tabs
-    [tabInterval, tabRounds, tabStopwatch].forEach(tab => {
+    [tabInterval, tabWeight, tabRounds, tabStopwatch].forEach(tab => {
       tab.classList.toggle('active', tab.dataset.tab === tabName);
     });
 
-    // Update views
     viewInterval.classList.toggle('active', tabName === 'interval');
+    viewWeight.classList.toggle('active', tabName === 'weight');
     viewRounds.classList.toggle('active', tabName === 'rounds');
     viewStopwatch.classList.toggle('active', tabName === 'stopwatch');
 
-    // Update Header
+    openPresetsBtn.style.display = tabName === 'interval' ? 'flex' : 'none';
+    headerWeightBtn.style.display = tabName === 'weight' ? 'flex' : 'none';
+    headerRoundsConfigBtn.style.display = tabName === 'rounds' ? 'flex' : 'none';
+    headerStopwatchTitle.style.display = tabName === 'stopwatch' ? 'block' : 'none';
+
     if (tabName === 'interval') {
-      openPresetsBtn.style.display = 'flex';
-      headerRoundsConfigBtn.style.display = 'none';
-      headerStopwatchTitle.style.display = 'none';
-      // Sync Interval theme
       const theme = PHASE_THEMES[timer.currentPhase] || PHASE_THEMES.work;
       document.documentElement.style.setProperty('--active-phase-color', theme.color);
       document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
       phasePill.textContent = theme.label;
+      timer.notifyTick();
+    } else if (tabName === 'weight') {
+      syncWeightTheme(weightTimer.phase);
+      weightTimer.notifyTick();
     } else if (tabName === 'rounds') {
-      openPresetsBtn.style.display = 'none';
-      headerRoundsConfigBtn.style.display = 'flex';
-      headerStopwatchTitle.style.display = 'none';
-      // Sync Rounds theme
       syncRoundsTheme(roundsTimer.phase);
+      roundsTimer.notifyTick();
     } else if (tabName === 'stopwatch') {
-      openPresetsBtn.style.display = 'none';
-      headerRoundsConfigBtn.style.display = 'none';
-      headerStopwatchTitle.style.display = 'block';
       document.documentElement.style.setProperty('--active-phase-color', '#00E676');
       document.documentElement.style.setProperty('--active-phase-glow', 'rgba(0, 230, 118, 0.35)');
     }
   }
 
-  tabInterval.addEventListener('click', () => {
-    sound.playTap();
-    switchTab('interval');
-  });
-
-  tabRounds.addEventListener('click', () => {
-    sound.playTap();
-    switchTab('rounds');
-  });
-
-  tabStopwatch.addEventListener('click', () => {
-    sound.playTap();
-    switchTab('stopwatch');
+  [tabInterval, tabWeight, tabRounds, tabStopwatch].forEach(tab => {
+    tab.addEventListener('click', () => {
+      sound.playTap();
+      switchTab(tab.dataset.tab);
+    });
   });
 
   // =========================================================================
-  // 1. INTERVAL TIMER CONTROLLER
+  // 1. INTERVAL / TABATA / HOME CIRCUIT CONTROLLER
   // =========================================================================
   timer.onTick = (data) => {
     if (currentActiveTab === 'interval') {
@@ -446,16 +581,37 @@ document.addEventListener('DOMContentLoaded', () => {
       setDisplay.textContent = `${data.set} / ${data.sets}`;
       setDisplayWrapper.style.display = data.sets > 1 ? 'block' : 'none';
 
+      if (data.exerciseName) {
+        intervalExerciseBanner.style.display = 'inline-flex';
+        intervalExerciseName.textContent = data.exerciseName;
+      } else {
+        intervalExerciseBanner.style.display = 'none';
+      }
+
+      const isActiveOrPaused = data.status === 'running' || data.status === 'paused';
+      intervalQuickAdjustRow.style.display = isActiveOrPaused ? 'flex' : 'none';
+
       const pct = Math.min(100, Math.round(data.totalProgress * 100));
       overallPercentText.textContent = `${pct}%`;
       overallProgressBar.style.width = `${pct}%`;
 
       if (data.status === 'finished') {
         nextUpText.textContent = '운동 완료!';
-      } else if (data.status === 'idle' && timer.config.prepare > 0) {
-        nextUpText.textContent = `시작 시 준비 ${formatTime(timer.config.prepare)}`;
+      } else if (data.status === 'idle') {
+        const firstEx = timer.getExerciseName(1);
+        if (timer.config.prepare > 0) {
+          nextUpText.textContent = firstEx
+            ? `준비 ${formatTime(timer.config.prepare)} → ${firstEx}`
+            : `시작 시 준비 ${formatTime(timer.config.prepare)}`;
+        } else {
+          nextUpText.textContent = firstEx
+            ? `1R: ${firstEx} (${formatTime(timer.config.work)})`
+            : `${data.nextInfo.label} (${formatTime(data.nextInfo.duration)})`;
+        }
       } else if (data.nextInfo) {
-        nextUpText.textContent = `${data.nextInfo.label} (${formatTime(data.nextInfo.duration)})`;
+        nextUpText.textContent = data.nextInfo.duration > 0
+          ? `${data.nextInfo.label} (${formatTime(data.nextInfo.duration)})`
+          : data.nextInfo.label;
       }
     }
 
@@ -465,14 +621,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const theme = PHASE_THEMES[data.phase] || PHASE_THEMES.work;
       updateMediaSessionMetadata({
         title: `[${theme.label}] ${formatTime(data.phaseRemaining)}`,
-        artist: `라운드 ${data.round} / ${data.rounds}`,
-        album: storage.getActivePreset()?.name || '타바타 4분',
+        artist: data.exerciseName ? `${data.exerciseName} (${data.round}/${data.rounds}R)` : `라운드 ${data.round} / ${data.rounds}`,
+        album: storage.getActivePreset()?.name || '타바타',
         state: 'playing'
       });
     } else {
       playIcon.style.display = 'block';
       pauseIcon.style.display = 'none';
-      updateMediaSessionMetadata({ state: 'paused' });
+      if (currentActiveTab === 'interval') {
+        updateMediaSessionMetadata({ state: 'paused' });
+      }
     }
   };
 
@@ -484,28 +642,40 @@ document.addEventListener('DOMContentLoaded', () => {
       phasePill.textContent = theme.label;
     }
 
-    if (phaseInfo.phase === 'work') {
-      sound.playWorkStart();
+    if (phaseInfo.phase === 'prepare') {
+      sound.playPrepareStart(phaseInfo.nextExerciseName);
+      triggerHaptic([60]);
+    } else if (phaseInfo.phase === 'work') {
+      sound.playWorkStart(phaseInfo.exerciseName, phaseInfo.isLastRound);
       triggerHaptic([100, 50, 100]);
     } else if (phaseInfo.phase === 'rest') {
-      sound.playRestStart();
+      sound.playRestStart(phaseInfo.nextExerciseName);
       triggerHaptic([80]);
     } else if (phaseInfo.phase === 'setRest') {
-      sound.playSetRestStart();
+      sound.playSetRestStart(phaseInfo.nextExerciseName);
       triggerHaptic([100, 100, 100]);
     } else if (phaseInfo.phase === 'cooldown') {
-      sound.playRestStart();
+      sound.playRestStart('');
       triggerHaptic([60]);
     }
   };
 
+  timer.onSecondTick = (sec) => {
+    sound.playSecondTick(sec);
+  };
+
+  timer.onHalfway = () => {
+    sound.playHalfway();
+    triggerHaptic([50, 50]);
+  };
+
   timer.onCountdownBeep = (sec) => {
-    sound.playCountdownBeep(sec, timer.currentPhase);
+    sound.playCountdownBeep(sec);
     triggerHaptic([40]);
   };
 
   timer.onComplete = () => {
-    releaseWakeLock();
+    releaseWakeLockIfIdle();
     updateBackgroundWorkerState();
     sound.playComplete();
     triggerHaptic([200, 100, 200, 100, 400]);
@@ -538,7 +708,10 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playTap();
     if (timer.status === 'running') {
       timer.pause();
-      releaseWakeLock();
+      releaseWakeLockIfIdle();
+    } else if (timer.status === 'paused') {
+      timer.resume();
+      requestWakeLock();
     } else {
       storage.saveLastWorkout(storage.getActivePreset());
       timer.start();
@@ -557,16 +730,276 @@ document.addEventListener('DOMContentLoaded', () => {
     timer.skipPrev();
   });
 
+  document.querySelectorAll('.interval-adj-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sound.playTap();
+      const adj = parseInt(btn.dataset.adj, 10);
+      timer.adjustPhaseTime(adj);
+      triggerHaptic([35]);
+      showToast(adj > 0 ? `+${adj}초 연장되었습니다.` : `${adj}초 단축되었습니다.`);
+    });
+  });
+
   resetBtn.addEventListener('click', () => {
     sound.playTap();
-    timer.reset();
-    releaseWakeLock();
-    updateBackgroundWorkerState();
-    showToast('인터벌 타이머가 초기화되었습니다.');
+    const isBusy = timer.status === 'running' || timer.status === 'paused';
+    handleProtectedReset('interval', isBusy, () => {
+      timer.reset();
+      releaseWakeLockIfIdle();
+      updateBackgroundWorkerState();
+      if (currentActiveTab === 'interval') {
+        const theme = PHASE_THEMES.work;
+        document.documentElement.style.setProperty('--active-phase-color', theme.color);
+        document.documentElement.style.setProperty('--active-phase-glow', theme.glow);
+        phasePill.textContent = theme.label;
+      }
+      showToast('인터벌 타이머가 초기화되었습니다.');
+    });
   });
 
   // =========================================================================
-  // 2. BOXING ROUNDS TIMER CONTROLLER
+  // 2. WEIGHT TRAINING SET & REST CONTROLLER
+  // =========================================================================
+  weightTimer.onTick = (data) => {
+    headerWeightName.textContent = data.exerciseLabel
+      ? `웨이트 · ${data.exerciseLabel}`
+      : '웨이트 세트 & 휴식';
+
+    if (currentActiveTab === 'weight') {
+      syncWeightTheme(data.phase);
+      weightMainTimeDisplay.textContent = formatTime(data.displaySeconds);
+      weightDialProgressRing.style.strokeDashoffset = `${DIAL_CIRCUMFERENCE * (1 - data.ringFraction)}`;
+
+      const shownSet = data.phase === 'finished' ? data.completedSets.length : data.currentSet;
+      weightSetDisplay.textContent = `${shownSet} / ${data.targetSets}`;
+
+      // Render Set Progress Pills
+      const totalDots = Math.max(data.targetSets, data.completedSets.length);
+      let dotsHtml = '';
+      for (let i = 1; i <= totalDots; i++) {
+        const isDone = i <= data.completedSets.length;
+        const isCurrent = !isDone && i === data.currentSet && data.phase !== 'finished';
+        dotsHtml += `<span class="set-dot ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''}">${isDone ? '✓ ' : ''}${i}</span>`;
+      }
+      weightSetDots.innerHTML = dotsHtml;
+
+      // Sync Rest Preset Chips highlight
+      document.querySelectorAll('.weight-rest-chip').forEach(chip => {
+        chip.classList.toggle('active', parseInt(chip.dataset.sec, 10) === data.restTime);
+      });
+
+      if (data.phase === 'ready') {
+        weightPhasePill.textContent = `${data.currentSet}세트 준비`;
+        weightSubHint.textContent = `운동 후 완료를 누르면 ${formatTime(data.restTime)} 휴식이 시작됩니다`;
+        weightPresetChipsRow.style.display = 'flex';
+        weightActiveAdjustRow.style.display = 'none';
+        weightSubBtnLabel.textContent = '⏱ 세트 시간 측정';
+        weightPrimaryBtnLabel.textContent = data.currentSet >= data.targetSets
+          ? `✓ ${data.currentSet}세트 완료 · 목표 달성`
+          : `✓ ${data.currentSet}세트 완료 · 휴식 시작`;
+      } else if (data.phase === 'lifting') {
+        weightPhasePill.textContent = data.isPaused
+          ? `${data.currentSet}세트 일시정지`
+          : `🔥 ${data.currentSet}세트 수행 중`;
+        weightSubHint.textContent = '세트 수행 시간 (TUT) 카운트업 중';
+        weightPresetChipsRow.style.display = 'flex';
+        weightActiveAdjustRow.style.display = 'none';
+        weightSubBtnLabel.textContent = data.isPaused ? '▶ 측정 재개' : '⏸ 일시정지';
+        weightPrimaryBtnLabel.textContent = data.currentSet >= data.targetSets
+          ? `✓ ${data.currentSet}세트 완료 · 목표 달성`
+          : `✓ ${data.currentSet}세트 완료 · 휴식 시작`;
+      } else if (data.phase === 'rest') {
+        const nextSet = data.completedSets.length + 1;
+        weightPhasePill.textContent = data.isPaused
+          ? '휴식 일시정지'
+          : `휴식 중 (다음 ${nextSet}세트)`;
+        weightSubHint.textContent = `${data.completedSets.length}세트 완료! 호흡을 가다듬으세요`;
+        weightPresetChipsRow.style.display = 'none';
+        weightActiveAdjustRow.style.display = 'flex';
+        weightSubBtnLabel.textContent = data.isPaused ? '▶ 휴식 재개' : '⏸ 일시정지';
+        weightPrimaryBtnLabel.textContent = `⏭ 휴식 스킵 · ${nextSet}세트 준비`;
+      } else if (data.phase === 'finished') {
+        weightPhasePill.textContent = '목표 세트 완료! 🎉';
+        weightSubHint.textContent = `총 ${data.completedSets.length}세트 수행 완료!`;
+        weightPresetChipsRow.style.display = 'flex';
+        weightActiveAdjustRow.style.display = 'none';
+        weightSubBtnLabel.textContent = '+1 추가 세트 & 휴식';
+        weightPrimaryBtnLabel.textContent = '🔄 새 종목 시작';
+      }
+
+      // Session summary badge
+      if (data.completedSets.length === 0) {
+        weightSessionSummary.textContent = '완료 0세트';
+      } else {
+        const last = data.completedSets[data.completedSets.length - 1];
+        weightSessionSummary.textContent = last.workSec
+          ? `완료 ${data.completedSets.length}세트 (최근 ${last.workSec}초)`
+          : `완료 ${data.completedSets.length}세트`;
+      }
+    }
+
+    if (data.status === 'running') {
+      updateMediaSessionMetadata({
+        title: data.phase === 'rest'
+          ? `[웨이트 휴식] ${formatTime(data.displaySeconds)}`
+          : `[${data.currentSet}세트 수행] ${formatTime(data.displaySeconds)}`,
+        artist: `세트 ${data.currentSet} / ${data.targetSets}`,
+        album: data.exerciseLabel || '웨이트 트레이닝',
+        state: 'playing'
+      });
+    } else if (currentActiveTab === 'weight') {
+      updateMediaSessionMetadata({ state: 'paused' });
+    }
+  };
+
+  weightTimer.onSecondTick = (sec) => {
+    sound.playSecondTick(sec);
+  };
+
+  weightTimer.onCountdownBeep = (sec) => {
+    sound.playCountdownBeep(sec);
+    triggerHaptic([40]);
+  };
+
+  weightTimer.onSetLogged = (finishedSet, restSec) => {
+    sound.playWeightRestStart(finishedSet, restSec);
+    triggerHaptic([90, 50, 90]);
+    requestWakeLock();
+    updateBackgroundWorkerState();
+  };
+
+  weightTimer.onRestComplete = (nextSetNum) => {
+    sound.playWeightNextSetReady(nextSetNum);
+    triggerHaptic([180, 80, 180]);
+    releaseWakeLockIfIdle();
+    updateBackgroundWorkerState();
+    showToast(`🔔 휴식 종료! ${nextSetNum}세트를 시작하세요.`);
+  };
+
+  weightTimer.onAllSetsComplete = (sets) => {
+    sound.playComplete();
+    triggerHaptic([200, 100, 200, 100, 400]);
+    releaseWakeLockIfIdle();
+    updateBackgroundWorkerState();
+    showToast(`🎉 목표 ${sets.length}세트를 모두 완료했습니다!`);
+  };
+
+  weightPrimaryBtn.addEventListener('click', () => {
+    sound.initContext();
+    sound.playTap();
+    if (weightTimer.phase === 'ready' || weightTimer.phase === 'lifting') {
+      weightTimer.completeSetAndRest();
+    } else if (weightTimer.phase === 'rest') {
+      weightTimer.skipRest();
+      releaseWakeLockIfIdle();
+      updateBackgroundWorkerState();
+      showToast(`${weightTimer.currentSet}세트 준비 상태입니다.`);
+    } else if (weightTimer.phase === 'finished') {
+      weightTimer.reset();
+      showToast('새 운동 종목을 위해 초기화되었습니다.');
+    }
+  });
+
+  weightSubBtn.addEventListener('click', () => {
+    sound.initContext();
+    sound.playTap();
+    if (weightTimer.phase === 'ready') {
+      weightTimer.startSetTimer();
+      requestWakeLock();
+      updateBackgroundWorkerState();
+    } else if (weightTimer.phase === 'lifting' || weightTimer.phase === 'rest') {
+      weightTimer.togglePause();
+      if (weightTimer.status === 'running') {
+        requestWakeLock();
+      } else {
+        releaseWakeLockIfIdle();
+      }
+      updateBackgroundWorkerState();
+    } else if (weightTimer.phase === 'finished') {
+      weightTimer.startBonusRestAndSet();
+    }
+  });
+
+  weightSetsMinusBtn.addEventListener('click', () => {
+    sound.playTap();
+    weightTimer.adjustTargetSets(-1);
+  });
+
+  weightSetsPlusBtn.addEventListener('click', () => {
+    sound.playTap();
+    weightTimer.adjustTargetSets(1);
+  });
+
+  document.querySelectorAll('.weight-rest-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      sound.playTap();
+      const sec = parseInt(chip.dataset.sec, 10);
+      weightTimer.setRestPreset(sec);
+      showToast(`세트 간 휴식: ${formatTime(sec)}`);
+    });
+  });
+
+  document.querySelectorAll('.weight-adj-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sound.playTap();
+      const adj = parseInt(btn.dataset.adj, 10);
+      weightTimer.adjustRest(adj);
+      triggerHaptic([35]);
+      showToast(adj > 0 ? `휴식 +${adj}초 연장` : `휴식 ${adj}초 단축`);
+    });
+  });
+
+  weightResetBtn.addEventListener('click', () => {
+    sound.playTap();
+    const isBusy = weightTimer.completedSets.length > 0 || weightTimer.phase !== 'ready';
+    handleProtectedReset('weight', isBusy, () => {
+      weightTimer.reset();
+      releaseWakeLockIfIdle();
+      updateBackgroundWorkerState();
+      showToast('웨이트 세트 카운터가 초기화되었습니다.');
+    });
+  });
+
+  function openWeightLabelModal() {
+    weightLabelInput.value = weightTimer.config.exerciseLabel || '';
+    weightLabelModal.classList.add('active');
+    setTimeout(() => weightLabelInput.focus(), 100);
+  }
+
+  headerWeightBtn.addEventListener('click', () => {
+    sound.playTap();
+    openWeightLabelModal();
+  });
+
+  weightEditLabelBtn.addEventListener('click', () => {
+    sound.playTap();
+    openWeightLabelModal();
+  });
+
+  closeWeightLabelBtn.addEventListener('click', () => {
+    weightLabelModal.classList.remove('active');
+  });
+
+  weightLabelModal.addEventListener('click', (e) => {
+    if (e.target === weightLabelModal) weightLabelModal.classList.remove('active');
+  });
+
+  document.querySelectorAll('.weight-quick-name').forEach(chip => {
+    chip.addEventListener('click', () => {
+      sound.playTap();
+      weightLabelInput.value = chip.dataset.label || '';
+    });
+  });
+
+  saveWeightLabelBtn.addEventListener('click', () => {
+    sound.playTap();
+    weightTimer.setExerciseLabel(weightLabelInput.value);
+    weightLabelModal.classList.remove('active');
+    showToast(weightTimer.config.exerciseLabel ? `'${weightTimer.config.exerciseLabel}' 설정됨` : '종목 메모가 지워졌습니다.');
+  });
+
+  // =========================================================================
+  // 3. BOXING ROUNDS TIMER CONTROLLER
   // =========================================================================
   function syncRoundsTheme(phase) {
     if (phase === 'round') {
@@ -628,7 +1061,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       roundsPlayIcon.style.display = 'block';
       roundsPauseIcon.style.display = 'none';
-      updateMediaSessionMetadata({ state: 'paused' });
+      if (currentActiveTab === 'rounds') {
+        updateMediaSessionMetadata({ state: 'paused' });
+      }
     }
   };
 
@@ -639,13 +1074,20 @@ document.addEventListener('DOMContentLoaded', () => {
       syncRoundsTheme(phase);
     }
 
-    if (phase === 'round') {
-      sound.playWorkStart();
+    if (phase === 'prepare') {
+      sound.playPrepareStart('');
+      triggerHaptic([60]);
+    } else if (phase === 'round') {
+      sound.playWorkStart('', round === totalRounds);
       triggerHaptic([150, 80, 150]);
     } else if (phase === 'rest') {
       sound.playRoundEndBell();
       triggerHaptic([100]);
     }
+  };
+
+  roundsTimer.onSecondTick = (sec) => {
+    sound.playSecondTick(sec);
   };
 
   roundsTimer.onWarning = () => {
@@ -655,12 +1097,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   roundsTimer.onCountdownBeep = (sec) => {
-    sound.playCountdownBeep(sec, roundsTimer.phase);
+    sound.playCountdownBeep(sec);
     triggerHaptic([40]);
   };
 
   roundsTimer.onComplete = () => {
-    releaseWakeLock();
+    releaseWakeLockIfIdle();
     updateBackgroundWorkerState();
     sound.playComplete();
     triggerHaptic([200, 100, 200, 100, 400]);
@@ -675,7 +1117,10 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playTap();
     if (roundsTimer.status === 'running') {
       roundsTimer.pause();
-      releaseWakeLock();
+      releaseWakeLockIfIdle();
+    } else if (roundsTimer.status === 'paused') {
+      roundsTimer.resume();
+      requestWakeLock();
     } else {
       localStorage.setItem('timerplus_last_rounds_config', JSON.stringify(currentRoundsConfig));
       roundsTimer.start();
@@ -696,11 +1141,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   roundsResetBtn.addEventListener('click', () => {
     sound.playTap();
-    roundsTimer.reset();
-    roundsWarningBadge.style.display = 'none';
-    releaseWakeLock();
-    updateBackgroundWorkerState();
-    showToast('라운드 타이머가 초기화되었습니다.');
+    const isBusy = roundsTimer.status === 'running' || roundsTimer.status === 'paused';
+    handleProtectedReset('rounds', isBusy, () => {
+      roundsTimer.reset();
+      roundsWarningBadge.style.display = 'none';
+      releaseWakeLockIfIdle();
+      updateBackgroundWorkerState();
+      if (currentActiveTab === 'rounds') syncRoundsTheme('round');
+      showToast('라운드 타이머가 초기화되었습니다.');
+    });
   });
 
   function updateRoundsSummaryUI() {
@@ -736,7 +1185,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === roundsConfigModal) roundsConfigModal.classList.remove('active');
   });
 
-  // Quick preset buttons for boxing
   document.querySelectorAll('.round-quick-preset-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       sound.playTap();
@@ -748,10 +1196,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Steppers for rounds config
   document.querySelectorAll('#roundsConfigModal .step-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      sound.playTap();
+    bindHoldStepper(btn, () => {
       const step = parseInt(btn.dataset.step, 10);
       const target = btn.dataset.target;
 
@@ -783,18 +1229,17 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('새 라운드 설정이 적용되었습니다.');
   });
 
-  // Initialize Rounds timer
   roundsTimer.setConfig({
     roundTime: currentRoundsConfig.roundTime,
     restTime: currentRoundsConfig.restTime,
     totalRounds: currentRoundsConfig.totalRounds,
-    warningTime: 10,
+    warningTime: currentRoundsConfig.warningTime ?? 10,
     prepare: 10
   });
   updateRoundsSummaryUI();
 
   // =========================================================================
-  // 3. STOPWATCH CONTROLLER
+  // 4. STOPWATCH CONTROLLER
   // =========================================================================
   stopwatch.onTick = (totalMs, currentLapMs, status) => {
     if (currentActiveTab === 'stopwatch') {
@@ -818,7 +1263,9 @@ document.addEventListener('DOMContentLoaded', () => {
       stopwatchStopIcon.style.display = 'none';
       stopwatchStartStopBtn.style.background = 'var(--color-work)';
       stopwatchLapResetLabel.textContent = '초기화';
-      updateMediaSessionMetadata({ state: 'paused' });
+      if (currentActiveTab === 'stopwatch') {
+        updateMediaSessionMetadata({ state: 'paused' });
+      }
     }
   };
 
@@ -867,7 +1314,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playTap();
     if (stopwatch.status === 'running') {
       stopwatch.pause();
-      releaseWakeLock();
+      releaseWakeLockIfIdle();
     } else {
       stopwatch.start();
       requestWakeLock();
@@ -904,6 +1351,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   soundQuickBtn.addEventListener('click', () => {
     sound.isMuted = !sound.isMuted;
+    if (!sound.isMuted && sound.soundMode === 'mute') {
+      sound.soundMode = 'all';
+    }
     sound.saveSettings();
     updateSoundIcon();
     showToast(sound.isMuted ? '소리 꺼짐 (무음)' : '소리 켜짐');
@@ -929,8 +1379,12 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = `preset-card ${p.id === activeId ? 'active' : ''}`;
 
       const totalSec = (p.prepare || 0) + (p.cooldown || 0) +
-        (p.sets * ((p.work * p.rounds) + (p.rest * (p.rounds - 1)))) +
-        ((p.sets - 1) * (p.setRest || 0));
+        (p.sets * ((p.work * p.rounds) + (p.rest * Math.max(0, p.rounds - 1)))) +
+        (Math.max(0, p.sets - 1) * (p.setRest || 0));
+
+      const exSummary = Array.isArray(p.exercises) && p.exercises.some(Boolean)
+        ? `<div class="preset-exercises-hint">🏋️ ${p.exercises.filter(Boolean).join(' · ')}</div>`
+        : '';
 
       card.innerHTML = `
         <div class="preset-info">
@@ -944,9 +1398,16 @@ document.addEventListener('DOMContentLoaded', () => {
             <span>${p.rounds}R ${p.sets > 1 ? `× ${p.sets}S` : ''}</span>
             <span>총 ${formatTime(totalSec)}</span>
           </div>
+          ${exSummary}
         </div>
         <div class="preset-card-actions">
-          <button class="icon-btn edit-preset-btn" data-id="${p.id}" title="편집">
+          <button class="icon-btn dup-preset-btn" data-id="${p.id}" title="복사본 만들기" aria-label="루틴 복제">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+          <button class="icon-btn edit-preset-btn" data-id="${p.id}" title="편집" aria-label="루틴 편집">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 20h9"></path>
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
@@ -956,7 +1417,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
 
       card.addEventListener('click', (e) => {
-        if (e.target.closest('.edit-preset-btn')) return;
+        if (e.target.closest('.edit-preset-btn') || e.target.closest('.dup-preset-btn')) return;
         sound.playTap();
         storage.setActivePresetId(p.id);
         loadActivePreset();
@@ -964,8 +1425,18 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`'${p.name}' 루틴이 선택되었습니다.`);
       });
 
-      const editBtn = card.querySelector('.edit-preset-btn');
-      editBtn.addEventListener('click', (e) => {
+      card.querySelector('.dup-preset-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        sound.playTap();
+        const duplicated = storage.duplicatePreset(p.id);
+        if (duplicated) {
+          loadActivePreset();
+          renderPresetsList();
+          showToast(`'${duplicated.name}' 생성 완료!`);
+        }
+      });
+
+      card.querySelector('.edit-preset-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         sound.playTap();
         presetsModal.classList.remove('active');
@@ -990,7 +1461,67 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === presetsModal) presetsModal.classList.remove('active');
   });
 
-  // Routine Editor Logic
+  // =========================================================================
+  // ROUTINE EDITOR & CIRCUIT EXERCISE NAMES
+  // =========================================================================
+  function syncCircuitInputsFromDOM() {
+    const inputs = circuitExercisesInputs.querySelectorAll('.circuit-round-input');
+    inputs.forEach(inp => {
+      const idx = parseInt(inp.dataset.ridx, 10);
+      currentEditorConfig.exercises[idx] = inp.value;
+    });
+  }
+
+  function renderCircuitExerciseInputs() {
+    const count = Math.min(20, Math.max(1, currentEditorConfig.rounds));
+    circuitExercisesInputs.innerHTML = '';
+
+    for (let i = 0; i < count; i++) {
+      const row = document.createElement('div');
+      row.className = 'circuit-input-row';
+      const val = currentEditorConfig.exercises[i] || '';
+      row.innerHTML = `
+        <span class="circuit-r-badge">${i + 1}R</span>
+        <input type="text" class="text-input circuit-round-input" data-ridx="${i}" value="${val.replace(/"/g, '&quot;')}" placeholder="${i + 1}라운드 운동명 (예: 스쿼트)">
+      `;
+      row.querySelector('input').addEventListener('input', (e) => {
+        currentEditorConfig.exercises[i] = e.target.value;
+        updateCircuitToggleLabel();
+      });
+      circuitExercisesInputs.appendChild(row);
+    }
+    updateCircuitToggleLabel();
+  }
+
+  function updateCircuitToggleLabel() {
+    const count = Math.min(20, currentEditorConfig.rounds);
+    const activeCount = (currentEditorConfig.exercises || [])
+      .slice(0, count)
+      .filter(v => v && v.trim().length > 0).length;
+
+    const arrow = circuitPanelExpanded ? '▴' : '▾';
+    circuitExercisesToggleBtn.textContent = activeCount > 0
+      ? `종목 ${activeCount}개 ${arrow}`
+      : `종목 설정 ${arrow}`;
+  }
+
+  function setCircuitPanelOpen(open) {
+    circuitPanelExpanded = open;
+    circuitExercisesPanel.style.display = open ? 'flex' : 'none';
+    updateCircuitToggleLabel();
+  }
+
+  circuitExercisesToggleBtn.addEventListener('click', () => {
+    sound.playTap();
+    setCircuitPanelOpen(!circuitPanelExpanded);
+  });
+
+  clearCircuitExercisesBtn.addEventListener('click', () => {
+    sound.playTap();
+    currentEditorConfig.exercises = [];
+    renderCircuitExerciseInputs();
+  });
+
   function updateEditorDisplay() {
     document.getElementById('valEditWork').textContent = formatTime(currentEditorConfig.work);
     document.getElementById('valEditRest').textContent = formatTime(currentEditorConfig.rest);
@@ -998,6 +1529,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('valEditSets').textContent = currentEditorConfig.sets;
     document.getElementById('valEditSetRest').textContent = formatTime(currentEditorConfig.setRest);
     document.getElementById('valEditPrepare').textContent = formatTime(currentEditorConfig.prepare);
+    document.getElementById('valEditCooldown').textContent = formatTime(currentEditorConfig.cooldown);
   }
 
   function openEditorForPreset(preset = null) {
@@ -1012,7 +1544,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sets: preset.sets,
         setRest: preset.setRest ?? 60,
         prepare: preset.prepare ?? 10,
-        cooldown: preset.cooldown ?? 0
+        cooldown: preset.cooldown ?? 0,
+        exercises: Array.isArray(preset.exercises) ? [...preset.exercises] : []
       };
       deleteRoutineBtn.style.display = preset.isBuiltin ? 'none' : 'block';
     } else {
@@ -1025,18 +1558,21 @@ document.addEventListener('DOMContentLoaded', () => {
         sets: 1,
         setRest: 60,
         prepare: 10,
-        cooldown: 0
+        cooldown: 0,
+        exercises: []
       };
       deleteRoutineBtn.style.display = 'none';
     }
 
     updateEditorDisplay();
+    renderCircuitExerciseInputs();
+    const hasExercises = currentEditorConfig.exercises.some(v => v && v.trim().length > 0);
+    setCircuitPanelOpen(hasExercises);
     editorModal.classList.add('active');
   }
 
   document.querySelectorAll('#editorModal .step-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      sound.playTap();
+    bindHoldStepper(btn, () => {
       const step = parseInt(btn.dataset.step, 10);
       const target = btn.dataset.target;
 
@@ -1045,13 +1581,17 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (target === 'editRest') {
         currentEditorConfig.rest = Math.max(0, currentEditorConfig.rest + step);
       } else if (target === 'editRounds') {
+        syncCircuitInputsFromDOM();
         currentEditorConfig.rounds = Math.max(1, Math.min(99, currentEditorConfig.rounds + step));
+        renderCircuitExerciseInputs();
       } else if (target === 'editSets') {
         currentEditorConfig.sets = Math.max(1, Math.min(20, currentEditorConfig.sets + step));
       } else if (target === 'editSetRest') {
         currentEditorConfig.setRest = Math.max(0, currentEditorConfig.setRest + step);
       } else if (target === 'editPrepare') {
         currentEditorConfig.prepare = Math.max(0, Math.min(60, currentEditorConfig.prepare + step));
+      } else if (target === 'editCooldown') {
+        currentEditorConfig.cooldown = Math.max(0, Math.min(600, currentEditorConfig.cooldown + step));
       }
 
       updateEditorDisplay();
@@ -1070,9 +1610,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   saveRoutineBtn.addEventListener('click', () => {
     sound.playTap();
+    syncCircuitInputsFromDOM();
+    const trimmedExercises = (currentEditorConfig.exercises || [])
+      .slice(0, Math.min(20, currentEditorConfig.rounds))
+      .map(s => (s || '').trim());
+    const cleanedExercises = trimmedExercises.some(Boolean) ? trimmedExercises : [];
+
     const name = editNameInput.value.trim() || '운동 루틴';
     const presetData = {
       ...currentEditorConfig,
+      exercises: cleanedExercises,
       name,
       id: editingPreset ? editingPreset.id : undefined
     };
@@ -1102,14 +1649,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === editorModal) editorModal.classList.remove('active');
   });
 
-  // Settings Modal
+  // =========================================================================
+  // SETTINGS & AUDIO MODAL
+  // =========================================================================
   openSettingsBtn.addEventListener('click', () => {
     sound.playTap();
     volumeSlider.value = Math.round(sound.volume * 100);
     volumePercentText.textContent = `${Math.round(sound.volume * 100)}%`;
-    if (audioMixingToggle) {
-      audioMixingToggle.checked = sound.audioMixingMode;
-    }
+    if (tickSoundToggle) tickSoundToggle.checked = sound.tickSoundEnabled;
+    if (halfwayAlertToggle) halfwayAlertToggle.checked = sound.halfwayAlertEnabled;
+    if (audioMixingToggle) audioMixingToggle.checked = sound.audioMixingMode;
 
     document.querySelectorAll('.seg-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.mode === sound.soundMode);
@@ -1145,6 +1694,25 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.saveSettings();
   });
 
+  if (tickSoundToggle) {
+    tickSoundToggle.addEventListener('change', () => {
+      sound.tickSoundEnabled = tickSoundToggle.checked;
+      sound.saveSettings();
+      if (sound.tickSoundEnabled) {
+        sound.playSecondTick(2);
+      }
+      showToast(sound.tickSoundEnabled ? '⏱️ 1초 똑딱 초침 소리 ON' : '1초 똑딱 초침 소리 OFF');
+    });
+  }
+
+  if (halfwayAlertToggle) {
+    halfwayAlertToggle.addEventListener('change', () => {
+      sound.halfwayAlertEnabled = halfwayAlertToggle.checked;
+      sound.saveSettings();
+      showToast(sound.halfwayAlertEnabled ? '🔔 절반 경과 알림 ON' : '절반 경과 알림 OFF');
+    });
+  }
+
   if (audioMixingToggle) {
     audioMixingToggle.addEventListener('change', () => {
       sound.audioMixingMode = audioMixingToggle.checked;
@@ -1153,24 +1721,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  let testSoundTimers = [];
+  function clearTestTimers() {
+    testSoundTimers.forEach(t => clearTimeout(t));
+    testSoundTimers = [];
+  }
+
+  if (testTickBtn) {
+    testTickBtn.addEventListener('click', () => {
+      sound.initContext();
+      clearTestTimers();
+      const prevTick = sound.tickSoundEnabled;
+      sound.tickSoundEnabled = true;
+      [0, 1, 2, 3].forEach((step) => {
+        testSoundTimers.push(setTimeout(() => {
+          sound.playSecondTick(4 - step);
+          if (step === 3) sound.tickSoundEnabled = prevTick;
+        }, step * 1000));
+      });
+    });
+  }
+
   testBellBtn.addEventListener('click', () => {
+    sound.initContext();
     sound.playBoxingBell();
   });
 
-  let testCountdownTimeout = null;
   testBeepBtn.addEventListener('click', () => {
     sound.initContext();
-    if (testCountdownTimeout) clearTimeout(testCountdownTimeout);
-    sound.playCountdownBeep(3, 'work');
-    testCountdownTimeout = setTimeout(() => {
-      sound.playCountdownBeep(2, 'work');
-      testCountdownTimeout = setTimeout(() => {
-        sound.playCountdownBeep(1, 'work');
-        testCountdownTimeout = setTimeout(() => {
-          sound.playWorkStart();
-        }, 1000);
-      }, 1000);
-    }, 1000);
+    clearTestTimers();
+    sound.playCountdownBeep(3);
+    testSoundTimers.push(setTimeout(() => sound.playCountdownBeep(2), 1000));
+    testSoundTimers.push(setTimeout(() => sound.playCountdownBeep(1), 2000));
+    testSoundTimers.push(setTimeout(() => sound.playWorkStart('', false), 3000));
   });
 
   resetDefaultsBtn.addEventListener('click', () => {
@@ -1195,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', () => {
     iosGuideModal.classList.remove('active');
   });
 
-  // PWA Service Worker & Installation
+  // PWA Service Worker Registration
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
@@ -1208,41 +1791,60 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-
-
   // =========================================================================
   // KEYBOARD SHORTCUTS (Desktop / Tablet / Laptop support)
   // =========================================================================
   window.addEventListener('keydown', (e) => {
-    // Ignore keystrokes when typing inside text inputs
     if (e.target && ['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
-    // Spacebar: Play / Pause active timer
     if (e.code === 'Space') {
       e.preventDefault();
       toggleCurrentTimer();
       return;
     }
 
-    // Right Arrow: Next interval / round / lap
     if (e.code === 'ArrowRight') {
       e.preventDefault();
       skipCurrentTimerNext();
       return;
     }
 
-    // Left Arrow: Previous interval / round
     if (e.code === 'ArrowLeft') {
       e.preventDefault();
       skipCurrentTimerPrev();
       return;
     }
 
-    // R: Reset active timer
+    if (e.code === 'Equal' || e.code === 'NumpadAdd') {
+      e.preventDefault();
+      if (currentActiveTab === 'interval' && (timer.status === 'running' || timer.status === 'paused')) {
+        timer.adjustPhaseTime(15);
+        showToast('+15초 연장되었습니다.');
+      } else if (currentActiveTab === 'weight') {
+        weightTimer.adjustRest(15);
+        showToast('휴식 +15초');
+      }
+      return;
+    }
+
+    if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
+      e.preventDefault();
+      if (currentActiveTab === 'interval' && (timer.status === 'running' || timer.status === 'paused')) {
+        timer.adjustPhaseTime(-10);
+        showToast('-10초 단축되었습니다.');
+      } else if (currentActiveTab === 'weight') {
+        weightTimer.adjustRest(-15);
+        showToast('휴식 -15초');
+      }
+      return;
+    }
+
     if (e.code === 'KeyR') {
       e.preventDefault();
       if (currentActiveTab === 'interval') {
         resetBtn.click();
+      } else if (currentActiveTab === 'weight') {
+        weightResetBtn.click();
       } else if (currentActiveTab === 'rounds') {
         roundsResetBtn.click();
       } else if (currentActiveTab === 'stopwatch') {
@@ -1252,25 +1854,28 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // M: Toggle Sound (Mute)
     if (e.code === 'KeyM') {
       e.preventDefault();
       soundQuickBtn.click();
       return;
     }
 
-    // 1, 2, 3: Fast Tab Switching
     if (e.code === 'Digit1') {
       switchTab('interval');
       sound.playTap();
       return;
     }
     if (e.code === 'Digit2') {
-      switchTab('rounds');
+      switchTab('weight');
       sound.playTap();
       return;
     }
     if (e.code === 'Digit3') {
+      switchTab('rounds');
+      sound.playTap();
+      return;
+    }
+    if (e.code === 'Digit4') {
       switchTab('stopwatch');
       sound.playTap();
       return;
@@ -1279,6 +1884,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize
   loadActivePreset();
+  weightTimer.notifyTick();
   updateSoundIcon();
   const savedTab = localStorage.getItem('timerplus_last_active_tab') || 'interval';
   switchTab(savedTab);

@@ -2,7 +2,8 @@
  * TimerPlus Audio Engine
  * Pure Web Audio API & Web Speech API Synthesizer
  * Zero external audio files required - works 100% offline with zero latency.
- * Supports loud acoustic boost, Korean voice countdown ("3초, 2초, 1초, 시작!"),
+ * Supports loud acoustic boost, 1-second tick-tock escapement cues,
+ * Korean voice cues ("준비", "3초, 2초, 1초, 시작!", circuit exercise names, weight set cues),
  * self-healing AudioContext recovery on app resume / background return,
  * and ambient audio mixing to play concurrently with YouTube Music / Spotify.
  */
@@ -15,6 +16,8 @@ class SoundEngine {
     this.volume = 1.0; // Default full volume
     this.soundMode = 'all'; // 'all' (beep + voice), 'beep', 'voice', 'mute'
     this.audioMixingMode = true; // Mix with background music apps (YouTube Music, Spotify)
+    this.tickSoundEnabled = true; // 1-second tick-tock sound while timer is running
+    this.halfwayAlertEnabled = true; // Halfway alert on >= 30s work intervals
     this.isUnlocked = false;
 
     // Load saved audio preferences
@@ -60,6 +63,8 @@ class SoundEngine {
         this.volume = parsed.volume ?? 1.0;
         this.soundMode = parsed.soundMode ?? 'all';
         this.audioMixingMode = parsed.audioMixingMode ?? true;
+        this.tickSoundEnabled = parsed.tickSoundEnabled ?? true;
+        this.halfwayAlertEnabled = parsed.halfwayAlertEnabled ?? true;
       }
     } catch (e) {
       console.warn('Failed to load audio settings', e);
@@ -72,7 +77,9 @@ class SoundEngine {
         isMuted: this.isMuted,
         volume: this.volume,
         soundMode: this.soundMode,
-        audioMixingMode: this.audioMixingMode
+        audioMixingMode: this.audioMixingMode,
+        tickSoundEnabled: this.tickSoundEnabled,
+        halfwayAlertEnabled: this.halfwayAlertEnabled
       }));
     } catch (e) {
       console.warn('Failed to save audio settings', e);
@@ -144,10 +151,31 @@ class SoundEngine {
   }
 
   /**
-   * Seamlessly un-suspends AudioContext and unsticks Web Speech API
-   * Called on visibilitychange, focus, pageshow, and right before any audio playback.
+   * Ensures Web Audio context is running WITHOUT interrupting ongoing speechSynthesis.
+   * Safe to call on 1-second ticks and button taps.
    */
-  async resumeContext() {
+  ensureAudioRunning() {
+    if (!this.ctx) {
+      this.initContext();
+      return;
+    }
+    if (this.ctx.state === 'interrupted' || this.ctx.state === 'closed') {
+      this.rebuildContext();
+      return;
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().then(() => {
+        this.isUnlocked = true;
+      }).catch(() => {
+        this.rebuildContext();
+      });
+    }
+  }
+
+  /**
+   * Seamlessly un-suspends AudioContext when returning from background / lock screen.
+   */
+  async resumeContext(resetSpeech = false) {
     this.configureAudioSession();
 
     if (!this.ctx) {
@@ -166,10 +194,8 @@ class SoundEngine {
       }
     }
 
-    // Unstuck Web Speech API queue if frozen in background
-    if ('speechSynthesis' in window) {
+    if (resetSpeech && 'speechSynthesis' in window) {
       try {
-        window.speechSynthesis.cancel();
         window.speechSynthesis.resume();
       } catch (e) {}
     }
@@ -209,28 +235,102 @@ class SoundEngine {
   }
 
   setupVisibilityListeners() {
-    // Whenever user switches back from home screen, music app, or screen lock
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        this.resumeContext();
+        this.resumeContext(true);
       }
     });
 
-    window.addEventListener('pageshow', () => this.resumeContext());
-    window.addEventListener('focus', () => this.resumeContext());
+    window.addEventListener('pageshow', () => this.resumeContext(true));
+    window.addEventListener('focus', () => this.resumeContext(true));
 
-    // Also touch gestures immediately ensure audio pipeline is awake
-    window.addEventListener('touchstart', () => this.resumeContext(), { passive: true });
-    window.addEventListener('pointerdown', () => this.resumeContext(), { passive: true });
+    window.addEventListener('touchstart', () => this.ensureAudioRunning(), { passive: true });
+    window.addEventListener('pointerdown', () => this.ensureAudioRunning(), { passive: true });
+  }
+
+  /**
+   * 1-Second Tick-Tock Cue ("똑-딱")
+   * Gentle, crisp mechanical watch / woodblock tick alternating pitch on even/odd seconds
+   * so users clearly feel time flowing without ear fatigue or clashing with background music.
+   */
+  playSecondTick(secValue = 0) {
+    if (this.isMuted || this.soundMode === 'mute' || !this.tickSoundEnabled) return;
+    this.ensureAudioRunning();
+    if (!this.ctx || !this.compressor) return;
+
+    try {
+      const t = this.ctx.currentTime;
+      const isTick = Math.round(secValue) % 2 === 0; // Alternating Tick (똑) / Tock (딱)
+
+      // Primary crisp woody click
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(isTick ? 1180 : 920, t);
+      osc.frequency.exponentialRampToValueAtTime(isTick ? 340 : 260, t + 0.026);
+
+      gain.gain.setValueAtTime(0.28, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.032);
+
+      osc.connect(gain);
+      gain.connect(this.compressor);
+      osc.start(t);
+      osc.stop(t + 0.035);
+
+      // Subtle high transient for clarity on mobile speakers
+      const clickOsc = this.ctx.createOscillator();
+      const clickGain = this.ctx.createGain();
+      clickOsc.type = 'sine';
+      clickOsc.frequency.setValueAtTime(isTick ? 2350 : 1850, t);
+      clickGain.gain.setValueAtTime(0.09, t);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.014);
+
+      clickOsc.connect(clickGain);
+      clickGain.connect(this.compressor);
+      clickOsc.start(t);
+      clickOsc.stop(t + 0.016);
+    } catch (e) {}
+  }
+
+  /**
+   * Prepare Countdown Start ("준비")
+   */
+  playPrepareStart(firstExerciseName = '') {
+    if (this.isMuted || this.soundMode === 'mute') return;
+    this.ensureAudioRunning();
+
+    if (this.ctx && this.compressor && this.soundMode !== 'voice') {
+      try {
+        const t = this.ctx.currentTime;
+        [659.25, 880].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const startAt = t + idx * 0.11;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startAt);
+          gain.gain.setValueAtTime(0.55, startAt);
+          gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.18);
+          osc.connect(gain);
+          gain.connect(this.compressor);
+          osc.start(startAt);
+          osc.stop(startAt + 0.2);
+        });
+      } catch (e) {}
+    }
+
+    if (this.soundMode === 'all' || this.soundMode === 'voice') {
+      const msg = firstExerciseName ? `준비. 첫 동작, ${firstExerciseName}` : '준비';
+      setTimeout(() => this.speakText(msg, 1.25), 60);
+    }
   }
 
   /**
    * 3, 2, 1 Countdown
    * Dual-tone resonant beep + clear Korean voice count ("3초", "2초", "1초")
    */
-  playCountdownBeep(count = 3, phase = 'prepare') {
+  playCountdownBeep(count = 3) {
     if (this.isMuted || this.soundMode === 'mute') return;
-    this.resumeContext();
+    this.ensureAudioRunning();
 
     // 1. Play dual-tone sports buzzer beep
     if (this.ctx && this.compressor && this.soundMode !== 'voice') {
@@ -238,7 +338,6 @@ class SoundEngine {
         const t = this.ctx.currentTime;
         const freq = count === 1 ? 1046.50 : 880; // C6 for 1, A5 for 3 & 2
 
-        // Fundamental oscillator
         const osc1 = this.ctx.createOscillator();
         const gain1 = this.ctx.createGain();
         osc1.type = 'sine';
@@ -251,7 +350,6 @@ class SoundEngine {
         osc1.start(t);
         osc1.stop(t + 0.17);
 
-        // Overtone harmonic for piercing presence in noisy gyms & earphones
         const osc2 = this.ctx.createOscillator();
         const gain2 = this.ctx.createGain();
         osc2.type = 'triangle';
@@ -277,21 +375,58 @@ class SoundEngine {
   }
 
   /**
-   * WORK Interval Start / Round Start ("시작!" + 링 벨)
+   * WORK Interval Start / Round Start ("시작!" + optional exercise name + 링 벨)
    */
-  playWorkStart() {
+  playWorkStart(exerciseName = '', isLastRound = false) {
     if (this.isMuted || this.soundMode === 'mute') return;
-    this.resumeContext();
+    this.ensureAudioRunning();
 
     if (this.soundMode !== 'voice') {
       this.playBoxingBell();
     }
 
     if (this.soundMode === 'all' || this.soundMode === 'voice') {
-      // Clear energetic "시작" voice cue
+      let text = '시작';
+      if (isLastRound && exerciseName) {
+        text = `마지막 라운드, ${exerciseName}`;
+      } else if (isLastRound) {
+        text = '마지막 라운드, 시작';
+      } else if (exerciseName) {
+        text = `시작, ${exerciseName}`;
+      }
       setTimeout(() => {
-        this.speakText('시작', 1.3);
+        this.speakText(text, 1.28);
       }, 50);
+    }
+  }
+
+  /**
+   * Halfway Point Cue ("절반 경과")
+   */
+  playHalfway() {
+    if (this.isMuted || this.soundMode === 'mute' || !this.halfwayAlertEnabled) return;
+    this.ensureAudioRunning();
+
+    if (this.ctx && this.compressor && this.soundMode !== 'voice') {
+      try {
+        const t = this.ctx.currentTime;
+        [0, 0.1].forEach((offset) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(783.99, t + offset); // G5 double pip
+          gain.gain.setValueAtTime(0.5, t + offset);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.08);
+          osc.connect(gain);
+          gain.connect(this.compressor);
+          osc.start(t + offset);
+          osc.stop(t + offset + 0.09);
+        });
+      } catch (e) {}
+    }
+
+    if (this.soundMode === 'all' || this.soundMode === 'voice') {
+      setTimeout(() => this.speakText('절반 경과', 1.3), 80);
     }
   }
 
@@ -299,11 +434,10 @@ class SoundEngine {
    * Authentic Boxing Ring Bell Synthesizer (Metallic Clang & Rich Reverb)
    */
   playBoxingBell() {
+    this.ensureAudioRunning();
     if (!this.ctx || !this.compressor) return;
     try {
       const t = this.ctx.currentTime;
-
-      // Harmonic frequencies resembling a metal gym ring bell
       const harmonics = [587.33, 880, 1174.66, 1760];
       const gains = [0.9, 0.65, 0.45, 0.28];
 
@@ -315,7 +449,6 @@ class SoundEngine {
         osc.frequency.setValueAtTime(freq, t);
 
         gain.gain.setValueAtTime(gains[idx], t);
-        // Bell reverberation decay
         gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
 
         osc.connect(gain);
@@ -334,7 +467,7 @@ class SoundEngine {
    */
   playWarningClapper() {
     if (this.isMuted || this.soundMode === 'mute') return;
-    this.resumeContext();
+    this.ensureAudioRunning();
     if (!this.ctx || !this.compressor) return;
 
     try {
@@ -369,11 +502,13 @@ class SoundEngine {
    */
   playRoundEndBell() {
     if (this.isMuted || this.soundMode === 'mute') return;
-    this.resumeContext();
-    this.playBoxingBell();
-    setTimeout(() => {
+    this.ensureAudioRunning();
+    if (this.soundMode !== 'voice') {
       this.playBoxingBell();
-    }, 280);
+      setTimeout(() => {
+        this.playBoxingBell();
+      }, 280);
+    }
 
     if (this.soundMode === 'all' || this.soundMode === 'voice') {
       setTimeout(() => {
@@ -383,11 +518,11 @@ class SoundEngine {
   }
 
   /**
-   * REST Interval Start - Descending tone + "휴식!"
+   * REST Interval Start - Descending tone + "휴식!" (+ next exercise preview)
    */
-  playRestStart() {
+  playRestStart(nextExerciseName = '') {
     if (this.isMuted || this.soundMode === 'mute') return;
-    this.resumeContext();
+    this.ensureAudioRunning();
 
     if (this.ctx && this.compressor && this.soundMode !== 'voice') {
       try {
@@ -413,8 +548,9 @@ class SoundEngine {
     }
 
     if (this.soundMode === 'all' || this.soundMode === 'voice') {
+      const msg = nextExerciseName ? `휴식. 다음 동작, ${nextExerciseName}` : '휴식';
       setTimeout(() => {
-        this.speakText('휴식', 1.25);
+        this.speakText(msg, 1.22);
       }, 80);
     }
   }
@@ -422,13 +558,89 @@ class SoundEngine {
   /**
    * Set Rest Start (Between sets)
    */
-  playSetRestStart() {
+  playSetRestStart(nextExerciseName = '') {
     if (this.isMuted || this.soundMode === 'mute') return;
-    this.playRestStart();
+    this.ensureAudioRunning();
+
+    if (this.soundMode !== 'voice') {
+      // Play descending tone without duplicate speech
+      if (this.ctx && this.compressor) {
+        try {
+          const t = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, t);
+          osc.frequency.exponentialRampToValueAtTime(349.23, t + 0.5);
+          gain.gain.setValueAtTime(0.85, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+          osc.connect(gain);
+          gain.connect(this.compressor);
+          osc.start(t);
+          osc.stop(t + 0.56);
+        } catch (e) {}
+      }
+    }
+
+    if (this.soundMode === 'all' || this.soundMode === 'voice') {
+      const msg = nextExerciseName ? `세트 휴식. 다음 동작, ${nextExerciseName}` : '세트 휴식';
+      setTimeout(() => {
+        this.speakText(msg, 1.22);
+      }, 100);
+    }
+  }
+
+  /**
+   * Weight Mode: Set Completed -> Rest Started
+   */
+  playWeightRestStart(completedSet, restSec) {
+    if (this.isMuted || this.soundMode === 'mute') return;
+    this.ensureAudioRunning();
+
+    if (this.ctx && this.compressor && this.soundMode !== 'voice') {
+      try {
+        const t = this.ctx.currentTime;
+        [523.25, 659.25].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const st = t + i * 0.09;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, st);
+          gain.gain.setValueAtTime(0.65, st);
+          gain.gain.exponentialRampToValueAtTime(0.001, st + 0.22);
+          osc.connect(gain);
+          gain.connect(this.compressor);
+          osc.start(st);
+          osc.stop(st + 0.24);
+        });
+      } catch (e) {}
+    }
+
+    if (this.soundMode === 'all' || this.soundMode === 'voice') {
+      const m = Math.floor(restSec / 60);
+      const s = restSec % 60;
+      const durText = m > 0 ? (s > 0 ? `${m}분 ${s}초` : `${m}분`) : `${s}초`;
+      setTimeout(() => {
+        this.speakText(`${completedSet}세트 완료. ${durText} 휴식`, 1.25);
+      }, 80);
+    }
+  }
+
+  /**
+   * Weight Mode: Rest Finished -> Ready for Next Set
+   */
+  playWeightNextSetReady(nextSetNum) {
+    if (this.isMuted || this.soundMode === 'mute') return;
+    this.ensureAudioRunning();
+
+    if (this.soundMode !== 'voice') {
+      this.playBoxingBell();
+    }
+
     if (this.soundMode === 'all' || this.soundMode === 'voice') {
       setTimeout(() => {
-        this.speakText('세트 휴식', 1.25);
-      }, 450);
+        this.speakText(`휴식 종료! ${nextSetNum}세트 시작하세요`, 1.25);
+      }, 90);
     }
   }
 
@@ -437,9 +649,9 @@ class SoundEngine {
    */
   playComplete() {
     if (this.isMuted || this.soundMode === 'mute') return;
-    this.resumeContext();
+    this.ensureAudioRunning();
 
-    if (this.ctx && this.compressor) {
+    if (this.ctx && this.compressor && this.soundMode !== 'voice') {
       try {
         const t = this.ctx.currentTime;
         const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
@@ -469,7 +681,7 @@ class SoundEngine {
     if (this.soundMode === 'all' || this.soundMode === 'voice') {
       setTimeout(() => {
         this.speakText('운동 완료! 수고하셨습니다!', 1.15);
-      }, 850);
+      }, 750);
     }
   }
 
@@ -478,7 +690,7 @@ class SoundEngine {
    */
   playTap() {
     if (this.isMuted || this.soundMode === 'mute') return;
-    this.resumeContext();
+    this.ensureAudioRunning();
     if (!this.ctx || !this.compressor) return;
 
     try {
@@ -500,12 +712,11 @@ class SoundEngine {
   }
 
   /**
-   * Web Speech API - loud, high-priority Korean voice synthesis with anti-stuck watchdog
+   * Web Speech API - loud, high-priority Korean voice synthesis
    */
   speakText(text, rate = 1.3) {
     if (!('speechSynthesis' in window)) return;
     try {
-      // Force resume & cancel previous pending utterance to prevent mobile speech locks
       window.speechSynthesis.resume();
       window.speechSynthesis.cancel();
 
@@ -513,9 +724,8 @@ class SoundEngine {
       utterance.lang = 'ko-KR';
       utterance.rate = rate;
       utterance.pitch = 1.05;
-      utterance.volume = 1.0; // Maximum volume for gym clarity
+      utterance.volume = 1.0;
 
-      // Select Korean voice if available
       const voices = window.speechSynthesis.getVoices();
       const koVoice = voices.find(v => v.lang === 'ko-KR' || v.lang.startsWith('ko'));
       if (koVoice) {

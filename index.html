@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Timer+ | 운동 인터벌 & 타바타 타이머 (TimerPlus)</title>
-  <meta name="description" content="타이머플러스(TimerPlus)와 동일한 기능의 고성능 운동 인터벌 타이머. 타바타, 복싱 라운드, HIIT, EMOM 맞춤 루틴 지원 및 100% 오프라인 동작 PWA.">
+  <title>Timer+ | 웨이트 · 타바타 · 홈트 서킷 운동 타이머 (TimerPlus)</title>
+  <meta name="description" content="웨이트 세트/휴식 카운터, 타바타, 홈트 서킷, 복싱 라운드 맞춤 루틴 지원 및 1초 초침 사운드 · 가로모드 · 100% 오프라인 동작 PWA.">
   <meta name="theme-color" content="#0a0c10">
 
   <!-- iOS Safari PWA Metas -->
@@ -50,6 +50,18 @@
         </svg>
       </button>
 
+      <!-- Weight Header Title / Exercise Memo Selector -->
+      <button class="routine-selector-btn" id="headerWeightBtn" style="display:none;" aria-label="운동 종목 입력">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"></path>
+        </svg>
+        <span class="routine-name-text" id="headerWeightName">웨이트 세트 & 휴식</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </button>
+
       <!-- Rounds Header Title / Config Button -->
       <button class="routine-selector-btn" id="headerRoundsConfigBtn" style="display:none;" aria-label="라운드 설정">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
@@ -68,7 +80,7 @@
       </div>
 
       <div class="header-actions">
-        <button class="icon-btn" id="soundQuickBtn" aria-label="소리 켜기/끄기">
+        <button class="icon-btn" id="soundQuickBtn" aria-label="소리 켜기/끄기" title="소리 켜기/끄기">
           <!-- Audio On SVG -->
           <svg id="soundIconOn" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -82,14 +94,14 @@
           </svg>
         </button>
 
-        <button class="icon-btn" id="openSettingsBtn" aria-label="설정">
+        <button class="icon-btn" id="openSettingsBtn" aria-label="설정" title="설정 & 오디오">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
         </button>
 
-        <button class="icon-btn" id="fullscreenBtn" aria-label="전체화면">
+        <button class="icon-btn" id="fullscreenBtn" aria-label="전체화면" title="전체화면 전환">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15 3 21 3 21 9"></polyline>
             <polyline points="9 21 3 21 3 15"></polyline>
@@ -101,7 +113,7 @@
     </header>
 
     <!-- =====================================================================
-         TAB VIEW 1: INTERVAL / TABATA (기존 인터벌 운동 뷰)
+         TAB VIEW 1: INTERVAL / TABATA / HOME CIRCUIT
          ===================================================================== -->
     <main class="tab-view active" id="viewInterval">
       <!-- Phase Indicator & Round/Set Counter -->
@@ -113,6 +125,9 @@
           </div>
           <div class="badge-item" id="setDisplayWrapper">
             세트 <strong id="setDisplay">1 / 1</strong>
+          </div>
+          <div class="badge-item exercise-badge" id="intervalExerciseBanner" style="display:none;">
+            🏋️ <strong id="intervalExerciseName">스쿼트</strong>
           </div>
         </div>
       </div>
@@ -131,6 +146,13 @@
             남은 총 시간: <span id="totalRemainingDisplay">04:10</span>
           </div>
         </div>
+      </div>
+
+      <!-- Live Quick Time Adjustment Chips (Visible when active/paused) -->
+      <div class="quick-adjust-row" id="intervalQuickAdjustRow" style="display:none;">
+        <button class="chip-btn interval-adj-btn" data-adj="-10">-10초</button>
+        <button class="chip-btn highlight interval-adj-btn" data-adj="15">+15초 연장</button>
+        <button class="chip-btn interval-adj-btn" data-adj="30">+30초</button>
       </div>
 
       <!-- Next Phase Preview Card -->
@@ -158,7 +180,7 @@
 
       <!-- Main Controls -->
       <div class="controls-bar">
-        <button class="secondary-control-btn" id="prevBtn" aria-label="이전 단계">
+        <button class="secondary-control-btn" id="prevBtn" aria-label="이전 단계" title="이전 단계">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="19 20 9 12 19 4 19 20"></polygon>
             <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="3"></line>
@@ -175,7 +197,7 @@
           </svg>
         </button>
 
-        <button class="secondary-control-btn" id="nextBtn" aria-label="다음 단계">
+        <button class="secondary-control-btn" id="nextBtn" aria-label="다음 단계" title="다음 단계 스킵">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="5 4 15 12 5 20 5 4"></polygon>
             <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="3"></line>
@@ -212,7 +234,92 @@
     </main>
 
     <!-- =====================================================================
-         TAB VIEW 2: ROUNDS TIMER (복싱 & 격투기 라운드 타이머)
+         TAB VIEW 2: WEIGHT TRAINING (웨이트 세트 카운터 & 자유 휴식)
+         ===================================================================== -->
+    <main class="tab-view" id="viewWeight">
+      <div class="phase-header-wrapper">
+        <div class="phase-pill" id="weightPhasePill">1세트 준비</div>
+        <div class="rounds-sets-bar">
+          <div class="badge-item weight-target-stepper">
+            <button class="mini-step-btn" id="weightSetsMinusBtn" aria-label="목표 세트 감소">−</button>
+            <span>세트 <strong id="weightSetDisplay">1 / 4</strong></span>
+            <button class="mini-step-btn" id="weightSetsPlusBtn" aria-label="목표 세트 증가">+</button>
+          </div>
+        </div>
+        <div class="weight-set-dots" id="weightSetDots">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Radial Dial for Weight Rest / TUT -->
+      <div class="dial-container">
+        <svg class="dial-svg" viewBox="0 0 260 260">
+          <circle class="dial-track" cx="130" cy="130" r="115" />
+          <circle class="dial-progress" id="weightDialProgressRing" cx="130" cy="130" r="115"
+                  stroke-dasharray="722.56" stroke-dashoffset="0" />
+        </svg>
+
+        <div class="dial-content">
+          <div class="time-display" id="weightMainTimeDisplay">01:30</div>
+          <div class="total-remaining-hint" id="weightSubHint">
+            세트 종료 후 버튼을 누르면 휴식이 시작됩니다
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Rest Preset Chips (Shown when ready / lifting / finished) -->
+      <div class="quick-adjust-row" id="weightPresetChipsRow">
+        <button class="chip-btn weight-rest-chip" data-sec="45">45초</button>
+        <button class="chip-btn weight-rest-chip" data-sec="60">1분</button>
+        <button class="chip-btn weight-rest-chip active" data-sec="90">1분 30초</button>
+        <button class="chip-btn weight-rest-chip" data-sec="120">2분</button>
+        <button class="chip-btn weight-rest-chip" data-sec="180">3분</button>
+      </div>
+
+      <!-- Active Rest Adjustment Chips (Shown during rest countdown) -->
+      <div class="quick-adjust-row" id="weightActiveAdjustRow" style="display:none;">
+        <button class="chip-btn weight-adj-btn" data-adj="-15">-15초</button>
+        <button class="chip-btn highlight weight-adj-btn" data-adj="15">+15초 연장</button>
+        <button class="chip-btn weight-adj-btn" data-adj="30">+30초</button>
+      </div>
+
+      <!-- Weight Controls -->
+      <div class="weight-action-bar">
+        <button class="weight-secondary-btn" id="weightSubBtn">
+          <span id="weightSubBtnLabel">⏱ 세트 시간 측정</span>
+        </button>
+
+        <button class="weight-primary-btn" id="weightPrimaryBtn">
+          <span id="weightPrimaryBtnLabel">✓ 1세트 완료 · 휴식 시작</span>
+        </button>
+      </div>
+
+      <!-- Weight Bottom Utilities -->
+      <div class="bottom-utils-bar">
+        <button class="util-btn" id="weightResetBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M2.5 2v6h6M21.5 22v-6h-6"></path>
+            <path d="M22 11.5A10 10 0 0 0 3.2 7.2L2.5 8M2 12.5a10 10 0 0 0 18.8 4.3l.7-.8"></path>
+          </svg>
+          새 종목 리셋
+        </button>
+
+        <span class="util-btn" id="weightSessionSummary" style="cursor:default;">
+          완료 0세트
+        </span>
+
+        <button class="util-btn" id="weightEditLabelBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          종목 메모
+        </button>
+      </div>
+    </main>
+
+    <!-- =====================================================================
+         TAB VIEW 3: ROUNDS TIMER (복싱 & 격투기 라운드 타이머)
          ===================================================================== -->
     <main class="tab-view" id="viewRounds">
       <!-- Round Phase & Header -->
@@ -304,7 +411,7 @@
     </main>
 
     <!-- =====================================================================
-         TAB VIEW 3: STOPWATCH (정밀 스톱워치 & 랩 타임)
+         TAB VIEW 4: STOPWATCH (정밀 스톱워치 & 랩 타임)
          ===================================================================== -->
     <main class="tab-view" id="viewStopwatch">
       <div class="stopwatch-display-container">
@@ -329,7 +436,7 @@
       </div>
 
       <!-- Stopwatch Controls -->
-      <div class="controls-bar" style="margin-top:auto;">
+      <div class="controls-bar stopwatch-controls-bar" style="margin-top:auto;">
         <button class="secondary-control-btn" id="stopwatchLapResetBtn" aria-label="랩 또는 초기화">
           <span id="stopwatchLapResetLabel" style="font-size:13px; font-weight:800;">초기화</span>
         </button>
@@ -343,10 +450,10 @@
           </svg>
         </button>
 
-        <div style="width:56px; height:56px; visibility:hidden;"></div>
+        <div class="stopwatch-spacer" style="width:56px; height:56px; visibility:hidden;"></div>
       </div>
 
-      <div class="bottom-utils-bar" style="justify-content:center; padding-top:4px;">
+      <div class="bottom-utils-bar stopwatch-utils-bar" style="justify-content:center; padding-top:4px;">
         <span style="font-size:11px; color:var(--text-muted); font-weight:600;">1/100초 정밀 계측</span>
       </div>
     </main>
@@ -360,7 +467,18 @@
           <circle cx="12" cy="12" r="9"></circle>
           <polyline points="12 6 12 12 14 14"></polyline>
         </svg>
-        <span>인터벌</span>
+        <span>인터벌·서킷</span>
+      </button>
+
+      <button class="nav-tab" id="tabWeight" data-tab="weight">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 6.5v11"></path>
+          <path d="M17.5 6.5v11"></path>
+          <path d="M3 9v6"></path>
+          <path d="M21 9v6"></path>
+          <path d="M6.5 12h11"></path>
+        </svg>
+        <span>웨이트</span>
       </button>
 
       <button class="nav-tab" id="tabRounds" data-tab="rounds">
@@ -431,7 +549,11 @@
       <div class="sheet-body">
         <div style="display:flex; flex-direction:column; gap:4px;">
           <label style="font-size:12px; color:var(--text-secondary); font-weight:700;">루틴 이름</label>
-          <input type="text" id="editNameInput" class="text-input" placeholder="예: 타바타 복근 챌린지">
+          <input type="text" id="editNameInput" class="text-input" placeholder="예: 타바타 복근 / 홈트 전신 서킷">
+        </div>
+
+        <div style="font-size:11px; color:var(--text-muted); margin-top:-4px;">
+          💡 <strong>+ / −</strong> 버튼을 길게 누르면 시간이 빠르게 변경됩니다.
         </div>
 
         <!-- Work Time -->
@@ -470,6 +592,23 @@
             <button class="step-btn" data-step="-1" data-target="editRounds">-</button>
             <span class="step-value" id="valEditRounds">8</span>
             <button class="step-btn" data-step="1" data-target="editRounds">+</button>
+          </div>
+        </div>
+
+        <!-- Circuit Per-Round Exercise Names (Optional) -->
+        <div class="circuit-editor-card">
+          <div class="circuit-editor-header">
+            <div class="field-label">
+              <span class="field-name" style="color:var(--color-prepare);">🏋️ 라운드별 운동 종목 (홈트 서킷용)</span>
+              <span class="field-desc">입력 시 다음 동작 화면 표시 및 음성 안내가 작동합니다</span>
+            </div>
+            <button type="button" class="secondary-btn" id="circuitExercisesToggleBtn" style="padding:6px 10px; font-size:12px;">종목 설정 ▾</button>
+          </div>
+          <div id="circuitExercisesPanel" style="display:none; margin-top:10px; flex-direction:column; gap:8px;">
+            <div id="circuitExercisesInputs" class="circuit-inputs-grid">
+              <!-- Rendered dynamically for each round -->
+            </div>
+            <button type="button" class="util-btn" id="clearCircuitExercisesBtn" style="align-self:flex-end; font-size:11px; padding:4px 8px;">종목명 전체 비우기</button>
           </div>
         </div>
 
@@ -512,6 +651,17 @@
           </div>
         </div>
 
+        <!-- Cooldown Time -->
+        <div class="editor-field">
+          <div class="field-label">
+            <span class="field-name" style="color:var(--color-cooldown);">마무리 쿨다운 (Cooldown)</span>
+            <span class="field-desc">모든 세트 종료 후 호흡 정리</span>
+          </div>
+          <div class="stepper-control">
+            <button class="step-btn" data-step="-5" data-target="editCooldown">-</button>
+            <span class="step-value" id="valEditCooldown">00:00</span>
+            <button class="step-btn" data-step="5" data-target="editCooldown">+</button>
+          </div>
         </div>
       </div>
       <div class="sheet-footer">
@@ -539,15 +689,16 @@
         <!-- Sound Mode -->
         <div style="display:flex; flex-direction:column; gap:8px;">
           <span style="font-size:14px; font-weight:700;">사운드 모드</span>
-          <div class="segmented-picker">
-            <button class="seg-btn active" data-mode="all" id="segModeAll">효과음 + 음성</button>
+          <div class="segmented-picker four-cols">
+            <button class="seg-btn active" data-mode="all" id="segModeAll">효과음+음성</button>
             <button class="seg-btn" data-mode="beep" id="segModeBeep">효과음만</button>
+            <button class="seg-btn" data-mode="voice" id="segModeVoice">음성만</button>
             <button class="seg-btn" data-mode="mute" id="segModeMute">무음</button>
           </div>
         </div>
 
         <!-- Volume Slider -->
-        <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
           <div style="display:flex; justify-content:space-between; font-size:13px;">
             <span style="color:var(--text-secondary); font-weight:700;">사운드 볼륨 (음향 부스트)</span>
             <span id="volumePercentText" style="font-weight:800; color:var(--color-work);">100%</span>
@@ -555,8 +706,31 @@
           <input type="range" class="range-slider" id="volumeSlider" min="0" max="100" value="100">
         </div>
 
+        <!-- 1-Second Tick-Tock Switch -->
+        <div class="setting-toggle-card">
+          <div style="display:flex; flex-direction:column; gap:2px; padding-right:12px;">
+            <span style="font-size:13.5px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+              ⏱️ 1초 똑딱 초침 소리
+              <span style="font-size:10px; background:var(--color-prepare); color:#000; font-weight:800; padding:1px 5px; border-radius:4px;">NEW</span>
+            </span>
+            <span style="font-size:11.5px; color:var(--text-secondary); line-height:1.4;">화면에서 눈을 떼고 운동해도 매 1초마다 가벼운 똑딱 소리로 시간 흐름을 알려줍니다.</span>
+          </div>
+          <input type="checkbox" id="tickSoundToggle" checked style="width:22px; height:22px; accent-color:var(--color-work); cursor:pointer; flex-shrink:0;">
+        </div>
+
+        <!-- Halfway Alert Switch -->
+        <div class="setting-toggle-card">
+          <div style="display:flex; flex-direction:column; gap:2px; padding-right:12px;">
+            <span style="font-size:13.5px; font-weight:700; color:var(--text-primary);">
+              🔔 절반 경과 알림 (30초 이상 운동)
+            </span>
+            <span style="font-size:11.5px; color:var(--text-secondary); line-height:1.4;">플랭크·서킷 등 30초 이상 운동 시 절반 지점을 알려줍니다.</span>
+          </div>
+          <input type="checkbox" id="halfwayAlertToggle" checked style="width:22px; height:22px; accent-color:var(--color-work); cursor:pointer; flex-shrink:0;">
+        </div>
+
         <!-- Background Music Mixing Mode Switch -->
-        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:12px 14px; margin-top:8px;">
+        <div class="setting-toggle-card">
           <div style="display:flex; flex-direction:column; gap:2px; padding-right:12px;">
             <span style="font-size:13.5px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
               🎵 음악 앱과 동시 재생
@@ -564,33 +738,24 @@
             </span>
             <span style="font-size:11.5px; color:var(--text-secondary); line-height:1.4;">유튜브 뮤직, 스포티파이 등 음악이 끊기지 않고 카운트다운 소리와 함께 들립니다.</span>
           </div>
-          <input type="checkbox" id="audioMixingToggle" checked style="width:22px; height:22px; accent-color:var(--color-work); cursor:pointer;">
+          <input type="checkbox" id="audioMixingToggle" checked style="width:22px; height:22px; accent-color:var(--color-work); cursor:pointer; flex-shrink:0;">
         </div>
 
         <!-- Sound Test Buttons -->
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <button class="secondary-btn" id="testBeepBtn" style="flex:1.2; font-size:12px; padding:10px;">⏱ "셋, 둘, 하나, 시작!"</button>
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <button class="secondary-btn" id="testTickBtn" style="flex:0.9; font-size:12px; padding:10px;">⏱ 똑-딱 테스트</button>
+          <button class="secondary-btn" id="testBeepBtn" style="flex:1.1; font-size:12px; padding:10px;">🔊 카운트다운</button>
           <button class="secondary-btn" id="testBellBtn" style="flex:0.8; font-size:12px; padding:10px;">🔔 복싱 벨</button>
         </div>
 
-        <!-- PWA / Offline Status Info -->
-        <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px; margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+        <!-- PWA / Landscape Info -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px; margin-top:4px; display:flex; flex-direction:column; gap:6px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="width:8px; height:8px; border-radius:50%; background:var(--color-work); box-shadow:0 0 8px var(--color-work-glow);"></span>
-            <strong style="font-size:14px;">100% 오프라인 지원</strong>
+            <strong style="font-size:13.5px;">가로 모드(전광판 뷰) & 100% 오프라인 지원</strong>
           </div>
           <p style="font-size:12px; color:var(--text-secondary); line-height:1.5;">
-            인터넷이 없는 헬스장, 지하, 비행기 모드에서도 완벽하게 작동합니다. 홈 화면에 추가하여 언제든 앱처럼 사용하세요.
-          </p>
-        </div>
-        <!-- Bluetooth Earbuds & Keyboard Shortcuts Info -->
-        <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px; margin-top:8px; display:flex; flex-direction:column; gap:8px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:16px;">🎧</span>
-            <strong style="font-size:13px;">에어팟 / 블루투스 이어폰 연동</strong>
-          </div>
-          <p style="font-size:12px; color:var(--text-secondary); line-height:1.5;">
-            에어팟/버즈 버튼이나 헤드폰 재생·일시정지 버튼을 누르면 땀 묻은 손으로 폰을 만지지 않고도 타이머를 제어할 수 있습니다.
+            스마트폰을 가로로 세워두면 멀리서도 잘 보이는 <strong>2단 대형 전광판 레이아웃</strong>으로 자동 전환되며, 비행기 모드나 지하 헬스장에서도 완벽히 작동합니다.
           </p>
         </div>
 
@@ -600,11 +765,11 @@
             <strong style="font-size:13px;">키보드 단축키 (PC / 태블릿)</strong>
           </div>
           <div style="font-size:12px; color:var(--text-secondary); display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-            <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">Space</strong> 시작/정지</span>
+            <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">Space</strong> 시작/세트완료</span>
             <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">← / →</strong> 이전/다음</span>
-            <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">R</strong> 초기화</span>
-            <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">M</strong> 음소거</span>
-            <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">1, 2, 3</strong> 탭 전환</span>
+            <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">+ / -</strong> +15초 / -10초</span>
+            <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">R / M</strong> 리셋 / 음소거</span>
+            <span><strong style="color:var(--text-primary); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">1 ~ 4</strong> 모드 탭 전환</span>
           </div>
         </div>
 
@@ -612,7 +777,7 @@
           📱 아이폰 홈 화면 추가 방법
         </button>
 
-        <button class="danger-btn" id="resetDefaultsBtn" style="margin-top:6px;">
+        <button class="danger-btn" id="resetDefaultsBtn" style="margin-top:4px;">
           기본 루틴으로 초기화
         </button>
       </div>
@@ -652,8 +817,6 @@
       </div>
     </div>
   </div>
-
-
 
   <!-- =========================================================================
        MODAL 5: Rounds Timer Settings Modal
@@ -733,9 +896,41 @@
     </div>
   </div>
 
+  <!-- =========================================================================
+       MODAL 6: Weight Exercise Label Quick Modal
+       ========================================================================= -->
+  <div class="modal-overlay" id="weightLabelModal">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <h3 class="sheet-title">현재 웨이트 종목 메모</h3>
+        <button class="icon-btn" id="closeWeightLabelBtn" aria-label="닫기">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <input type="text" id="weightLabelInput" class="text-input" placeholder="예: 벤치프레스 80kg / 바벨 스쿼트">
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          <button type="button" class="chip-btn weight-quick-name" data-label="벤치프레스">벤치프레스</button>
+          <button type="button" class="chip-btn weight-quick-name" data-label="스쿼트">스쿼트</button>
+          <button type="button" class="chip-btn weight-quick-name" data-label="데드리프트">데드리프트</button>
+          <button type="button" class="chip-btn weight-quick-name" data-label="랫풀다운 / 풀업">랫풀다운/풀업</button>
+          <button type="button" class="chip-btn weight-quick-name" data-label="숄더프레스">숄더프레스</button>
+          <button type="button" class="chip-btn weight-quick-name" data-label="">메모 지우기</button>
+        </div>
+      </div>
+      <div class="sheet-footer">
+        <button class="primary-btn" id="saveWeightLabelBtn" style="flex:1;">적용하기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="./js/audio.js"></script>
   <script src="./js/timer.js"></script>
+  <script src="./js/weight_timer.js"></script>
   <script src="./js/rounds_timer.js"></script>
   <script src="./js/stopwatch.js"></script>
   <script src="./js/storage.js"></script>

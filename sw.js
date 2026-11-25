@@ -1,4 +1,4 @@
-const CACHE_NAME = 'timerplus-v1.4.0';
+const CACHE_NAME = 'timerplus-v1.5.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const STATIC_ASSETS = [
   './js/app.js',
   './js/audio.js',
   './js/timer.js',
+  './js/weight_timer.js',
   './js/rounds_timer.js',
   './js/stopwatch.js',
   './js/storage.js',

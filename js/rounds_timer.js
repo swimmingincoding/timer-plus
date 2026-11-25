@@ -1,6 +1,6 @@
 /**
  * TimerPlus Dedicated Boxing & Combat Round Timer Engine
- * Includes authentic 10-second warning clapper and round bells.
+ * Includes authentic 10-second warning clapper, round bells, and 1-second tick cues.
  */
 class BoxingRoundTimer {
   constructor() {
@@ -13,19 +13,22 @@ class BoxingRoundTimer {
     };
 
     this.status = 'idle'; // 'idle', 'running', 'paused', 'finished'
-    this.phase = 'prepare'; // 'prepare', 'round', 'rest', 'finished'
+    this.phase = 'round'; // 'prepare', 'round', 'rest', 'finished'
     this.currentRound = 1;
-    this.phaseDuration = 10;
-    this.phaseRemaining = 10;
-    
+    this.phaseDuration = 180;
+    this.phaseRemaining = 180;
+
     this.warningFired = false;
     this.lastBeepSecond = null;
+    this.lastTickSecond = null;
     this.timerInterval = null;
     this.lastTimestamp = null;
 
     this.onTick = null;
     this.onPhaseChange = null;
     this.onWarning = null;
+    this.onCountdownBeep = null;
+    this.onSecondTick = null;
     this.onComplete = null;
   }
 
@@ -40,8 +43,8 @@ class BoxingRoundTimer {
     this.currentRound = 1;
     this.warningFired = false;
     this.lastBeepSecond = null;
+    this.lastTickSecond = null;
 
-    // In idle state, display the round duration (e.g. 03:00) so user sees active fight time
     this.phase = 'round';
     this.phaseDuration = this.config.roundTime;
     this.phaseRemaining = this.config.roundTime;
@@ -51,6 +54,11 @@ class BoxingRoundTimer {
 
   start() {
     if (this.status === 'running') return;
+    if (this.status === 'paused') {
+      this.resume();
+      return;
+    }
+
     if (this.status === 'finished' || this.status === 'idle') {
       this.currentRound = 1;
       this.warningFired = false;
@@ -65,11 +73,13 @@ class BoxingRoundTimer {
         this.phaseDuration = this.config.roundTime;
         this.phaseRemaining = this.config.roundTime;
       }
+      this.lastTickSecond = Math.ceil(this.phaseRemaining);
     }
 
     this.status = 'running';
     this.lastTimestamp = Date.now();
 
+    if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(() => {
       this.tick();
     }, 50);
@@ -95,6 +105,19 @@ class BoxingRoundTimer {
     this.notifyTick();
   }
 
+  resume() {
+    if (this.status !== 'paused') return;
+    this.status = 'running';
+    this.lastTimestamp = Date.now();
+
+    if (this.timerInterval) clearInterval(this.timerInterval);
+    this.timerInterval = setInterval(() => {
+      this.tick();
+    }, 50);
+
+    this.notifyTick();
+  }
+
   syncTime() {
     if (this.status === 'running') {
       this.tick();
@@ -104,6 +127,8 @@ class BoxingRoundTimer {
   togglePlay() {
     if (this.status === 'running') {
       this.pause();
+    } else if (this.status === 'paused') {
+      this.resume();
     } else {
       this.start();
     }
@@ -111,7 +136,7 @@ class BoxingRoundTimer {
 
   skipNext() {
     if (this.status === 'idle' || this.status === 'finished') return;
-    this.advance();
+    this.advance(false);
   }
 
   skipPrev() {
@@ -120,6 +145,8 @@ class BoxingRoundTimer {
     if (this.phaseDuration - this.phaseRemaining > 3) {
       this.phaseRemaining = this.phaseDuration;
       this.warningFired = false;
+      this.lastBeepSecond = null;
+      this.lastTickSecond = Math.ceil(this.phaseRemaining);
       this.notifyTick();
       return;
     }
@@ -139,6 +166,8 @@ class BoxingRoundTimer {
     }
     this.phaseRemaining = this.phaseDuration;
     this.warningFired = false;
+    this.lastBeepSecond = null;
+    this.lastTickSecond = Math.ceil(this.phaseRemaining);
 
     if (this.onPhaseChange) {
       this.onPhaseChange({
@@ -159,43 +188,78 @@ class BoxingRoundTimer {
 
     if (delta <= 0) return;
 
+    const isLongBackgroundCatchup = delta > 2.5;
+    const prevPhase = this.phase;
+    const prevRound = this.currentRound;
+
     while (delta > 0 && this.status === 'running') {
       if (this.phaseRemaining > delta) {
         this.phaseRemaining -= delta;
 
-        // 10s Warning Clapper during round
-        if (this.phase === 'round' && this.config.warningTime > 0) {
-          if (this.phaseRemaining <= this.config.warningTime && !this.warningFired) {
-            this.warningFired = true;
-            if (this.onWarning) {
-              this.onWarning(Math.round(this.phaseRemaining));
+        if (!isLongBackgroundCatchup) {
+          const ceilSec = Math.ceil(this.phaseRemaining);
+          let warningJustFired = false;
+
+          // 10s Warning Clapper during round
+          if (this.phase === 'round' && this.config.warningTime > 0) {
+            if (this.phaseRemaining <= this.config.warningTime && !this.warningFired) {
+              this.warningFired = true;
+              warningJustFired = true;
+              this.lastTickSecond = ceilSec;
+              if (this.onWarning) {
+                this.onWarning(Math.round(this.phaseRemaining));
+              }
             }
           }
-        }
 
-        // 3, 2, 1 Countdown Beeps & Voice in all active phases (prepare, round, rest)
-        const ceilSec = Math.ceil(this.phaseRemaining);
-        if (ceilSec <= 3 && ceilSec >= 1 && ceilSec !== this.lastBeepSecond) {
-          this.lastBeepSecond = ceilSec;
-          if (this.onCountdownBeep) {
-            this.onCountdownBeep(ceilSec, this.phase);
+          // 3, 2, 1 Countdown Beeps & Voice
+          if (ceilSec <= 3 && ceilSec >= 1 && ceilSec !== this.lastBeepSecond) {
+            this.lastBeepSecond = ceilSec;
+            this.lastTickSecond = ceilSec;
+            if (this.onCountdownBeep) {
+              this.onCountdownBeep(ceilSec, this.phase);
+            }
+          } else if (
+            !warningJustFired &&
+            ceilSec > 3 &&
+            ceilSec < Math.ceil(this.phaseDuration) &&
+            ceilSec !== this.lastTickSecond
+          ) {
+            this.lastTickSecond = ceilSec;
+            if (this.onSecondTick) {
+              this.onSecondTick(ceilSec, this.phase);
+            }
           }
         }
         delta = 0;
       } else {
         delta -= this.phaseRemaining;
         this.phaseRemaining = 0;
-        this.advance();
+        this.advance(isLongBackgroundCatchup);
         if (this.status === 'finished') {
           break;
         }
       }
     }
 
+    if (
+      isLongBackgroundCatchup &&
+      this.status === 'running' &&
+      (this.phase !== prevPhase || this.currentRound !== prevRound)
+    ) {
+      if (this.onPhaseChange) {
+        this.onPhaseChange({
+          phase: this.phase,
+          round: this.currentRound,
+          totalRounds: this.config.totalRounds
+        });
+      }
+    }
+
     this.notifyTick();
   }
 
-  advance() {
+  advance(silent = false) {
     this.warningFired = false;
     this.lastBeepSecond = null;
 
@@ -217,8 +281,9 @@ class BoxingRoundTimer {
     }
 
     this.phaseRemaining = this.phaseDuration;
+    this.lastTickSecond = Math.ceil(this.phaseRemaining);
 
-    if (this.onPhaseChange) {
+    if (!silent && this.onPhaseChange) {
       this.onPhaseChange({
         phase: this.phase,
         round: this.currentRound,
@@ -226,7 +291,9 @@ class BoxingRoundTimer {
       });
     }
 
-    this.notifyTick();
+    if (!silent) {
+      this.notifyTick();
+    }
   }
 
   finish() {
